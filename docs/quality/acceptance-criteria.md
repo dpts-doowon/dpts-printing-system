@@ -50,7 +50,7 @@ Os limiares abaixo valem para as **duas estações** operando ao mesmo tempo, em
 | ID | Critério / Medida | Limiar | Verificação | Req. / Decisão | Estado do limiar |
 |---|---|---|---|---|---|
 | PERF-01 | Latência de leitura (telas e consultas paginadas) | p95 ≤ 500 ms; p99 ≤ 1 s | Teste de carga | Diretrizes de engenharia | PROPOSED — PENDING DOOWON VALIDATION |
-| PERF-02 | Aceite do pedido de impressão (do envio ao retorno do `print_job_id`) para 1, 10 e 30 etiquetas | p95 ≤ 1 s | Teste de carga | REQ-005 | PROPOSED — PENDING DOOWON VALIDATION |
+| PERF-02 | Aceite do pedido de impressão (do envio ao retorno do `print_job_id`) para 4, 8 e 32 etiquetas | p95 ≤ 1 s | Teste de carga | REQ-005 | PROPOSED — PENDING DOOWON VALIDATION |
 | PERF-03 | Tempo entre o PRINT_JOB aceito e a primeira tentativa reivindicada | p95 ≤ 3 s | Teste de integração | D-020 | PROPOSED — PENDING DOOWON VALIDATION |
 | PERF-04 | Sobrecarga de software por etiqueta (da reivindicação ao envio), excluindo a impressão física | p95 ≤ 200 ms | Teste com simulador e impressora real | D-007 | PROPOSED — PENDING DOOWON VALIDATION |
 | PERF-05 | Tempo total de um PRINT_JOB de 30 etiquetas | Valor a definir (depende da velocidade da impressora, D-007, e do pico, D-008) | Teste na impressora real | D-007, D-008 | TBD — PENDING DOOWON DECISION |
@@ -112,7 +112,7 @@ Os limiares abaixo valem para as **duas estações** operando ao mesmo tempo, em
 | ID | Critério | Limiar | Req. | Estado do limiar |
 |---|---|---|---|---|
 | FUN-01 | Login do operador, seleção de peça e seleção ou exibição da máquina (conforme D-040), e visualização de PN, descrição, operador e turno antes de imprimir | 100% dos casos do UAT passam | REQ-001 a REQ-004 | PROPOSED — PENDING DOOWON VALIDATION |
-| FUN-02 | Botões 1, 10 e 30 geram exatamente essas quantidades; a interface não tem campo de quantidade livre; nenhuma outra quantidade é aceita pela API | 100% | REQ-005, E-016 | PROPOSED — PENDING DOOWON VALIDATION |
+| FUN-02 | Botões 4, 8 e 32 geram exatamente essas quantidades; a interface não tem campo de quantidade livre; nenhuma outra quantidade é aceita pela API | 100% | REQ-005, E-016 | PROPOSED — PENDING DOOWON VALIDATION |
 | FUN-03 | Operador não acessa nenhuma função administrativa | 0 acessos | REQ-019 | PROPOSED — PENDING DOOWON VALIDATION |
 | FUN-04 | Admin gerencia máquinas, operadores, peças, turnos e consulta histórico e auditoria | 100% dos casos do UAT passam | REQ-017, REQ-018 | PROPOSED — PENDING DOOWON VALIDATION |
 | FUN-05 | Entradas inválidas são rejeitadas no servidor com mensagem compreensível | 100% dos casos de validação | REQ-026 | PROPOSED — PENDING DOOWON VALIDATION |
@@ -141,7 +141,7 @@ Todos os itens abaixo são condições binárias (sim/não, com evidência). O g
 | GL-02 | Versão de produção marcada e aprovada pela Doowon; formalização do aceite | Registro de aceite |
 | GL-03 | CI verde na release; 0 defeitos S1/S2 abertos; S3 abertos acordados por escrito | Relatório do CI e do UAT |
 | GL-04 | SEC-01 a SEC-16 aplicáveis atendidos ou com exceção aprovada por escrito | Relatório de segurança |
-| GL-05 | Teste de 1, 10 e 30 etiquetas (1 PRINT_JOB cada, com N LABELs) aprovado nas duas estações com impressora real | Evidências do UAT |
+| GL-05 | Teste de 4, 8 e 32 etiquetas (1 PRINT_JOB cada, com N LABELs) aprovado nas duas estações com impressora real | Evidências do UAT |
 | GL-06 | Leitura física do QR conforme TRC-09 | Evidência fotográfica e registro |
 | GL-07 | Teste de carga com volume confirmado concluído (PERF-08) | Relatório de carga |
 | GL-08 | Duas estações simultâneas sem roteamento cruzado (PERF-06) | Relatório do UAT |
@@ -164,7 +164,7 @@ Todos os itens abaixo são condições binárias (sim/não, com evidência). O g
 | Severidade | Definição | Exemplo |
 |---|---|---|
 | S1 | Etiqueta errada, duplicada ou falsa confirmação; falha de segurança; perda de dados | Duas etiquetas físicas para um mesmo `label_id` sem reimpressão |
-| S2 | Função principal inutilizável sem contorno | Não consegue imprimir 30 |
+| S2 | Função principal inutilizável sem contorno | Não consegue imprimir 32 |
 | S3 | Função afetada com contorno aceitável | Filtro de histórico falha em um campo |
 | S4 | Cosmético ou melhoria | Texto com erro de digitação |
 

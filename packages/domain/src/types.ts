@@ -25,7 +25,7 @@ export type EvidenceType = "PRINTER_ACK" | "PRINTER_COUNTER" | "OPERATOR_CONFIRM
 export type HoldReason = "JOB_HELD" | "PRINTER_UNAVAILABLE";
 
 /** Quantidades permitidas na V1 (REQ-005 / E-016). */
-export const ALLOWED_QUANTITIES = [1, 10, 30] as const;
+export const ALLOWED_QUANTITIES = [4, 8, 32] as const;
 export type AllowedQuantity = (typeof ALLOWED_QUANTITIES)[number];
 
 export interface Actor {

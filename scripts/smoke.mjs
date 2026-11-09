@@ -1,4 +1,4 @@
-// Verificação rápida do ambiente local (com `pnpm dev` em execução): login, impressão de 1 etiqueta e histórico.
+// Verificação rápida do ambiente local (com `pnpm dev` em execução): login, impressão de 4 etiquetas e histórico.
 const API = process.env.API_URL ?? "http://localhost:3001";
 const call = async (method, path, token, body) => {
   const res = await fetch(`${API}${path}`, {
@@ -35,7 +35,7 @@ try {
   const job = await call("POST", "/operator/print-jobs", op, {
     partId: ctx.parts[0].id,
     machineId: ctx.machines[0].id,
-    quantity: 1,
+    quantity: 4,
     idempotencyKey: crypto.randomUUID(),
   });
   for (let i = 0; i < 40; i++) {

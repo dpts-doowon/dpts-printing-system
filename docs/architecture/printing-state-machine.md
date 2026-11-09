@@ -23,10 +23,10 @@
 
 Três conceitos distintos, que **não devem ser confundidos**:
 
-| Entidade | O que é | Quantidade para um pedido de 30 etiquetas |
+| Entidade | O que é | Quantidade para um pedido de 32 etiquetas |
 |---|---|---|
-| `PRINT_JOB` | O **pedido** do operador (clicar em Imprimir 1, 10 ou 30). Tem chave de idempotência, quantidade, estação, máquina, impressora e operador. Seu estado é **derivado** dos estados das tentativas | **1** |
-| `LABEL` | A **etiqueta lógica**: identificador único (`label_id`) e snapshot imutável dos dados. Existe independentemente de quantas vezes foi impressa | **30**, cada uma com `label_id` independente |
+| `PRINT_JOB` | O **pedido** do operador (clicar em Imprimir 4, 8 ou 32). Tem chave de idempotência, quantidade, estação, máquina, impressora e operador. Seu estado é **derivado** dos estados das tentativas | **1** |
+| `LABEL` | A **etiqueta lógica**: identificador único (`label_id`) e snapshot imutável dos dados. Existe independentemente de quantas vezes foi impressa | **32**, cada uma com `label_id` independente |
 | `PRINT_ATTEMPT` | A **tentativa de produzir uma saída física** de uma LABEL dentro de um PRINT_JOB. É a unidade da máquina de estados. Na impressão original, `attempt_no = 1` | **30** (uma por LABEL) |
 
 Entidades de apoio: `Station`, `Machine`, `Printer`, `DISPATCH_RECORD` (registro técnico de cada reivindicação/envio pelo agente) e `AuditEvent` (append-only).
@@ -55,7 +55,7 @@ erDiagram
 
 | `kind` | Quando | Cria LABELs? | Exigências |
 |---|---|---|---|
-| `ORIGINAL` | Pedido normal do operador (1, 10 ou 30) | **Sim**: N LABELs novas | Idempotência, validações |
+| `ORIGINAL` | Pedido normal do operador (4, 8 ou 32) | **Sim**: N LABELs novas | Idempotência, validações |
 | `RETRY` | Etiqueta cuja última tentativa terminou em `FAILED` (provado que nada saiu) | Não | Ação humana; motivo opcional |
 | `REPRINT` | Etiqueta física existe, mas foi danificada, perdida ou precisa de outra cópia | Não (mesmo `label_id`, RECOMMENDED, D-011) | Motivo, ator, autorização conforme D-019 |
 
@@ -221,7 +221,7 @@ Campos do `DISPATCH_RECORD` (cada reivindicação/execução pelo agente): `agen
 
 Consequência: toda etiqueta que pode ter saído fisicamente tem uma tentativa em `SENDING` ou posterior. Não existe etiqueta física sem registro prévio.
 
-## 6. Idempotência, clique duplicado e pedidos de 1, 10 e 30
+## 6. Idempotência, clique duplicado e pedidos de 4, 8 e 32
 
 ### 6.1 Chave de idempotência (E-001)
 
@@ -247,9 +247,9 @@ O último caso cobre o duplo clique que gera duas chaves diferentes. É regra da
 
 **Recarregar a página durante a impressão:** a interface consulta o PRINT_JOB ativo da estação no servidor; não reenvia o pedido.
 
-### 6.3 Pedidos de 1, 10 e 30
+### 6.3 Pedidos de 4, 8 e 32
 
-- A quantidade só pode ser **1, 10 ou 30**, validada no servidor.
+- A quantidade só pode ser **4, 8 ou 32**, validada no servidor.
 - Cada pedido cria **1 PRINT_JOB**, **N LABELs** (cada uma com `label_id` independente e `sequence_in_job`) e **N PRINT_ATTEMPTs**.
 - As tentativas são enviadas **uma por vez**, na ordem do PRINT_JOB, por impressora.
 

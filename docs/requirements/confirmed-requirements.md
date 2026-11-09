@@ -15,7 +15,7 @@
 | REQ-002 | O operador seleciona a máquina/posto de produção. Se a Doowon confirmar vínculo fixo 1:1 entre posto e máquina (recomendação da Clavia, D-040), a máquina do posto é exibida e o dropdown de máquina é removido da interface do operador. | Escopo confirmado |
 | REQ-003 | O operador seleciona a peça/modelo em produção. | Escopo confirmado |
 | REQ-004 | O operador confirma visualmente os dados selecionados antes de imprimir; o turno atual é exibido como informação somente leitura. | Escopo confirmado |
-| REQ-005 | A tela de impressão oferece botões grandes `Imprimir 1 etiqueta`, `Imprimir 10 etiquetas` e `Imprimir 30 etiquetas`, sem digitação de quantidade. Na V1 as únicas quantidades são 1, 10 e 30; não há campo de quantidade livre na interface nem na API. | Escopo confirmado; reafirmado em 2026-10-07 |
+| REQ-005 | A tela de impressão oferece botões grandes `Imprimir 4 etiquetas`, `Imprimir 8 etiquetas` e `Imprimir 32 etiquetas`, sem digitação de quantidade. Na V1 as únicas quantidades são 4, 8 e 32 (ajuste pedido pela Doowon em 2026-11-06, relato; antes eram 1, 10 e 30; a mídia imprime 4 etiquetas por linha); não há campo de quantidade livre na interface nem na API. | Escopo confirmado; reafirmado em 2026-10-07; quantidades alteradas em 2026-11-06 (relato, fonte Doowon a identificar) |
 | REQ-006 | O operador recebe status claro de impressão e pode confirmar a saída das etiquetas. | Escopo confirmado |
 | REQ-007 | O operador pode solicitar reimpressão controlada, informando motivo. | Escopo confirmado |
 | REQ-008 | A navegação do operador é mínima, para continuar a produção com poucos passos. | Escopo confirmado |
@@ -28,7 +28,7 @@
 | ID | Requisito | Fonte |
 |---|---|---|
 | REQ-010 | A etiqueta física tem 30 mm x 20 mm. | Escopo confirmado |
-| REQ-011 | Informações conhecidas da etiqueta: descrição da peça (2 letras + 3 números, em destaque), Part Number, operador logado, turno, data/hora de produção, QR Code e identificador único de rastreabilidade. Nenhum outro campo (inclusive "Lote de produção", D-039) entra na etiqueta sem confirmação da Doowon. | Escopo confirmado; reafirmado em 2026-10-07 |
+| REQ-011 | Informações conhecidas da etiqueta: descrição da peça (2 letras + 3 números, em destaque), Part Number, operador logado, turno, data/hora de produção, QR Code e identificador único de rastreabilidade. Nenhum outro campo (inclusive "Lote de produção", D-039) entra na etiqueta sem confirmação da Doowon. | Escopo confirmado; reafirmado em 2026-10-07; quantidades alteradas em 2026-11-06 (relato, fonte Doowon a identificar) |
 | REQ-012 | Cada etiqueta lógica (LABEL) criada para produção recebe um identificador único e imutável. Um pedido de 30 etiquetas gera **1 PRINT_JOB** (o pedido do operador) e **30 LABELs independentes**, cada uma com seu próprio `label_id`. PRINT_JOB e LABEL são entidades distintas (`printing-state-machine.md` §2). | Escopo confirmado |
 | REQ-013 | O sistema registra dados de rastreabilidade e histórico de impressão. | Escopo confirmado |
 | REQ-014 | Reimpressões são controladas e auditadas, exigem motivo, ator e data/hora, e preservam o histórico anterior. | Escopo confirmado |
@@ -106,7 +106,7 @@ Itens que **não** estão no escopo técnico confirmado, salvo formalização:
 - coletores e scanners como parte da solução;
 - integrações de terceiros;
 - novas máquinas, postos físicos ou módulos adicionais;
-- quantidade de etiquetas digitada livremente pelo operador (na V1 os botões confirmados são 1, 10 e 30);
+- quantidade de etiquetas digitada livremente pelo operador (na V1 os botões confirmados são 4, 8 e 32);
 - fila de impressão, seleção de impressora pelo operador e compartilhamento de impressora entre postos (fora da V1; qualquer pedido segue o procedimento de mudança);
 - CRUD de impressoras para o ADMIN (a configuração de impressora é técnica e feita na implantação);
 - campo "Lote de produção" (até confirmação em D-039);

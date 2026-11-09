@@ -29,6 +29,8 @@ export interface PrintServiceConfig {
   protocolMax: number;
   /** PROPOSED: o operador pode informar o resultado de uma etiqueta desconhecida após conferir (D-031). */
   operatorMayResolveUnknown: boolean;
+  /** Quantidades aceitas num pedido ORIGINAL (E-016). Em produção são as de ALLOWED_QUANTITIES; só os testes usam outras. */
+  allowedQuantities: readonly number[];
 }
 
 export const DEFAULT_CONFIG: PrintServiceConfig = {
@@ -38,6 +40,7 @@ export const DEFAULT_CONFIG: PrintServiceConfig = {
   protocolMin: 0,
   protocolMax: 0,
   operatorMayResolveUnknown: true,
+  allowedQuantities: ALLOWED_QUANTITIES,
 };
 
 export interface Deps {
@@ -250,8 +253,8 @@ export class PrintService {
           const replay = await this.checkIdempotency(tx, input.idempotencyKey, fingerprint);
           if (replay) return { view: await this.viewIn(tx, replay.id), replayed: true };
 
-          if (!(ALLOWED_QUANTITIES as readonly number[]).includes(input.quantity))
-            throw new DomainError("INVALID_QUANTITY", "Quantidade inválida. Use 1, 10 ou 30.");
+          if (!this.cfg.allowedQuantities.includes(input.quantity))
+            throw new DomainError("INVALID_QUANTITY", "Quantidade inválida. Use 4, 8 ou 32.");
           if (!input.allowedMachineIds.includes(input.machine.id))
             throw new DomainError("MACHINE_NOT_ALLOWED", "Máquina não permitida para este posto.");
           await this.assertPrinterFree(tx, input.printerId);
