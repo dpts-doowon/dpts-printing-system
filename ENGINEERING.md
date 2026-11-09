@@ -64,7 +64,7 @@ Size **30 mm × 20 mm**. Known information: part description (2 letters + 3 numb
 **Field list is closed (2026-10-07, E-019):** only the fields above appear on the label. A "Lote de produção" (production lot) shown in an early illustrative prototype is **excluded** until Doowon confirms whether the concept exists and where its value comes from (D-039); it is not a PRINT_JOB. No other field is added without Doowon's confirmation.
 
 ### 2.5 Printing actions — CONFIRMED
-Operator screen prominently offers `Imprimir 1 etiqueta`, `Imprimir 10 etiquetas`, `Imprimir 30 etiquetas`. No manual quantity typing. In V1 the only quantities are 1, 10 and 30 (E-016): there is **no free-quantity field** in the UI or the API. An arbitrary-quantity option would be a new requirement.
+Operator screen prominently offers `Imprimir 4 etiquetas`, `Imprimir 8 etiquetas`, `Imprimir 32 etiquetas` (changed from 1/10/30 on 2026-11-06 at the customer's request, so that no label of a 4-across row is wasted). No manual quantity typing. In V1 the only quantities are 4, 8 and 32 (E-016): there is **no free-quantity field** in the UI or the API. An arbitrary-quantity option would be a new requirement.
 
 ### 2.6 Additional confirmed items and V1 scope boundaries
 - **Search** of labels and history by ID, part, Part Number, operator, machine and period; consultation and history remain in V1.
@@ -79,7 +79,7 @@ Operator screen prominently offers `Imprimir 1 etiqueta`, `Imprimir 10 etiquetas
 ## 3. Users and permissions
 
 - **ADMIN — CONFIRMED:** login; manage machines, operators, parts/models, shifts; review records; query traceability/history and reprints; access audit information. A basic history report with Excel export is provisional until D-017 is validated. The ADMIN can view the status of both printers but has **no printer CRUD** in V1; printer links and parameters are defined at deployment by Clavia/Doowon IT (E-022).
-- **OPERATOR — CONFIRMED:** mandatory authentication; machine/station and part selection (machine is displayed instead if D-040 confirms a fixed 1:1 link); data confirmation; print 1/10/30; clear print status; confirm output; request controlled reprint with reason; minimal navigation. No administrative CRUD.
+- **OPERATOR — CONFIRMED:** mandatory authentication; machine/station and part selection (machine is displayed instead if D-040 confirms a fixed 1:1 link); data confirmation; print 4/8/32; clear print status; confirm output; request controlled reprint with reason; minimal navigation. No administrative CRUD.
 - **RBAC — REQUIRED:** minimum roles `ADMIN` and `OPERATOR`, enforced on the **server/API**, never only by hiding UI. Additional roles (supervisor, quality, auditor) would be new requirements.
 
 ---
@@ -102,7 +102,7 @@ Official model (approved 2026-10-06): `PRINT_JOB → LABEL → PRINT_ATTEMPT`. F
 - **`PRINT_JOB`** = one operator print request (kind `ORIGINAL`, `RETRY` or `REPRINT`). Its status is **derived** from its labels.
 - **`LABEL`** = one logical label with its own immutable `label_id` and immutable snapshot.
 - **`PRINT_ATTEMPT`** = one physical print attempt of one label (`attempt_no` per label).
-- A `PRINT_JOB` of kind `ORIGINAL` with quantity N creates **exactly N LABELs**: a request for **30 labels creates 1 PRINT_JOB and 30 independent LABELs** (30 distinct `label_id`s). `REPRINT`/`RETRY` jobs create new attempts for existing LABELs, not new LABELs. Never 30 indistinguishable records, and never a single record standing for 30 labels.
+- A `PRINT_JOB` of kind `ORIGINAL` with quantity N creates **exactly N LABELs**: a request for **32 labels creates 1 PRINT_JOB and 32 independent LABELs** (32 distinct `label_id`s). `REPRINT`/`RETRY` jobs create new attempts for existing LABELs, not new LABELs. Never 32 indistinguishable records, and never a single record standing for 32 labels.
 - **Vocabulary (final):** the three entities are `PRINT_JOB`, `LABEL` and `PRINT_ATTEMPT`. Do not use `PrintBatch`, `PrintJob`, `PrintAttempt` or "batch" as entity names. "Lote de produção" is a possible business attribute (D-039, excluded for now), never the PRINT_JOB. "Lote" appears only when quoting Doowon's own volume statement (D-008).
 
 ### 5.2 Snapshot
@@ -273,9 +273,9 @@ SLA is **OPEN**. Engineering targets are defined in `docs/quality/acceptance-cri
 
 - **Unit:** ID generation/format; shift determination; permissions; quantity validation; idempotency; payload construction; reprint rules; state transitions and invariants (INV-1…INV-10); adapter rendering. Coverage is a supporting metric; critical domain modules need very high branch coverage (project-level target `PROPOSED — PENDING DOOWON VALIDATION`).
 - **Integration:** API + database; transactions; migrations; auth/RBAC; PRINT_JOB/LABEL creation; agent claiming; audit events; retry/error behavior.
-- **E2E (simulated printer):** admin setup; operator login; machine and part selection; print 1/10/30; traceability search; controlled reprint.
+- **E2E (simulated printer):** admin setup; operator login; machine and part selection; print 4/8/32; traceability search; controlled reprint.
 - **Printer simulator:** accepts normalized print requests (PRINT_ATTEMPT payloads); stores rendered output; simulates success, failure, timeout and `UNKNOWN_OUTCOME`; no labels consumed.
-- **Physical printer matrix (after printer selection):** 1/10/30 labels; confirmed volume; QR scan on real 30×20 mm media; smallest readable text; start/stop/restart; offline; out of media; out of ribbon (where applicable); printer error; USB/network disconnect; agent restart mid-PRINT_JOB; workstation restart; browser double-click and refresh; API timeout; **two stations concurrently**; wrong-station routing prevention; shift transition; reprint with reason; uncertain-outcome handling (including the 17/1/12 case).
+- **Physical printer matrix (after printer selection):** 4/8/32 labels; confirmed volume; QR scan on real 30×20 mm media; smallest readable text; start/stop/restart; offline; out of media; out of ribbon (where applicable); printer error; USB/network disconnect; agent restart mid-PRINT_JOB; workstation restart; browser double-click and refresh; API timeout; **two stations concurrently**; wrong-station routing prevention; shift transition; reprint with reason; uncertain-outcome handling (including the 17/1/12 case).
 - **Security:** admin API denied to operators; inactive user cannot log in; IDOR/BOLA on label/history IDs; injection tests; login abuse/rate limits; session expiry; secret scan; dependency scan; security headers/TLS.
 
 ---
@@ -319,7 +319,7 @@ Dates depend on the release of dependencies by Doowon (D-026) and are not define
 
 ## 26. Acceptance / UAT baseline
 
-Agreed with Doowon in `docs/quality/uat-plan.md` and `docs/quality/acceptance-criteria.md`. Baseline: admin management and access control; operator flow with 1/10/30 labels producing **1 PRINT_JOB and N independent LABELs**; double-click does not duplicate the PRINT_JOB; clear success/failure state; per-label traceability (ID, part, PN snapshot, operator, machine/station, shift, timestamp, originating PRINT_JOB, attempts/reprints, reprint reason); reprint requires reason and preserves history; offline printer never produces a false `PRINTED_CONFIRMED`; uncertain outcome handled safely without blind duplication.
+Agreed with Doowon in `docs/quality/uat-plan.md` and `docs/quality/acceptance-criteria.md`. Baseline: admin management and access control; operator flow with 4/8/32 labels producing **1 PRINT_JOB and N independent LABELs**; double-click does not duplicate the PRINT_JOB; clear success/failure state; per-label traceability (ID, part, PN snapshot, operator, machine/station, shift, timestamp, originating PRINT_JOB, attempts/reprints, reprint reason); reprint requires reason and preserves history; offline printer never produces a false `PRINTED_CONFIRMED`; uncertain outcome handled safely without blind duplication.
 
 ---
 
@@ -349,7 +349,7 @@ Go-live is not recommended until every applicable item is YES or N/A.
 Three distinct gates; an earlier gate never replaces a later one. No criterion below has been approved by Doowon: all are `PROPOSED — PENDING DOOWON VALIDATION` or `TBD — PENDING DOOWON DECISION`. Details in `docs/architecture/printing-reliability.md` §10.
 
 - **GATE A — Ready to Develop Locally:** Doowon's mandatory architectural constraints known well enough not to build an incompatible solution (technology, licences, containers, network/security constraints that affect the architecture); repository defined (D-001) or temporary alternative approved in writing; model and invariants accepted; confirmed requirements recorded and traced. AWS account/region/topology need **not** be provisioned: D-002 to D-004 are required before closing and deploying the AWS architecture, not for local development. D-005 is not an absolute blocker: local user/password authentication is the contracted baseline. Printer-specific code stays blocked until D-007.
-- **GATE B — physical integration with a representative printer:** the selected printer (D-007) or a representative one agreed in writing; documentation, test unit, 30×20 mm media and ribbon where applicable; 1/10/30 labels, QR read, smallest legible text and an agreed subset of the physical matrix; one station is enough. Does not replace GATE C.
+- **GATE B — physical integration with a representative printer:** the selected printer (D-007) or a representative one agreed in writing; documentation, test unit, 30×20 mm media and ribbon where applicable; 4/8/32 labels, QR read, smallest legible text and an agreed subset of the physical matrix; one station is enough. Does not replace GATE C.
 - **GATE C — Production Readiness with the two final stations (mandatory, no exception; PRG-01 / GL-00):**
 > **Nenhum go-live poderá ocorrer sem homologação física da impressora selecionada, mídia real e ribbon quando aplicável, utilizando os dois postos em condições representativas de produção.**
 
@@ -359,7 +359,7 @@ Three distinct gates; an earlier gate never replaces a later one. No criterion b
 - **Governance:** release approved by Doowon; repository ownership/access correct; no unreviewed changes on `main`; BLOCKER decisions resolved.
 - **Security:** no secrets in Git history; MFA/access policy; least-privilege IAM reviewed; TLS; production database not publicly exposed unless approved; authentication/RBAC tests pass; scans acceptable; logs free of secrets.
 - **Data:** production migrations tested in HML; backup configured; restore/recovery documented and restore-tested; retention and timezone agreed.
-- **Printing:** printer model/DPI/protocol documented; 30×20 mm label physically homologated on real media; QR physically scanned; 1/10/30 tests passed (1 PRINT_JOB each, N LABELs); confirmed-volume test passed; double-click/idempotency passed; printer-offline passed; `UNKNOWN_OUTCOME` handling tested (including 17/1/12); both stations concurrent and correctly routed.
+- **Printing:** printer model/DPI/protocol documented; 30×20 mm label physically homologated on real media; QR physically scanned; 4/8/32 tests passed (1 PRINT_JOB each, N LABELs); confirmed-volume test passed; double-click/idempotency passed; printer-offline passed; `UNKNOWN_OUTCOME` handling tested (including 17/1/12); both stations concurrent and correctly routed.
 - **Operations:** agent version known per station; startup/restart verified; monitoring available; runbook ready; support contacts defined; rollback ready.
 - **Acceptance:** admin UAT passed; operator UAT with real or representative users; formal Doowon acceptance for go-live.
 

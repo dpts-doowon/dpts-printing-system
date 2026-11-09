@@ -43,7 +43,7 @@
 | F21 | Estação errada reivindica tentativa | Vínculo no servidor | Rejeitado | Auditoria de segurança | — |
 | F22 | Atualização do agente durante tentativa ativa | Verificação de tentativas ativas | Atualização adiada | Aguardar término | — |
 | F23 | Migração/rollback do aplicativo com PRINT_JOBs ativos | Procedimento de implantação | Preservados | Verificar compatibilidade antes | — |
-| F24 | Falha no meio de um PRINT_JOB de 10 ou 30 | Estado das tentativas | Restantes retidas | Operador escolhe continuar, cancelar ou conferir (state-machine §10) | **Não** |
+| F24 | Falha no meio de um PRINT_JOB de 8 ou 32 | Estado das tentativas | Restantes retidas | Operador escolhe continuar, cancelar ou conferir (state-machine §10) | **Não** |
 
 ## 3. Parâmetros iniciais
 
@@ -187,7 +187,7 @@ Finalidade: validar adaptador, renderização 30 × 20 mm, QR e tratamento de st
 |---|---|
 | Impressora | O modelo selecionado (D-007) ou, se ainda indisponível, uma impressora **representativa** acordada por escrito (mesma família, DPI e linguagem) |
 | Insumos | Documentação técnica; unidade de teste; mídia 30 × 20 mm; ribbon quando aplicável |
-| Conteúdo mínimo | 1, 10 e 30 etiquetas; leitura de QR; menor texto legível; subconjunto da matriz física do `uat-plan.md` §6 definido com a Doowon |
+| Conteúdo mínimo | 4, 8 e 32 etiquetas; leitura de QR; menor texto legível; subconjunto da matriz física do `uat-plan.md` §6 definido com a Doowon |
 | Postos | Um posto é suficiente (os dois são exigidos no GATE C) |
 | Evidência | Fotos, leitura de QR e registros arquivados |
 | Aprovação | Registro por escrito (signatários: TBD — PENDING DOOWON DECISION) |

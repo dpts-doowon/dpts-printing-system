@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DomainError } from "./errors.js";
+import { ALLOWED_QUANTITIES } from "./types.js";
 import { admin, agentInfo, counts, operator, originalInput, printOne, setup } from "./testkit.js";
 
 const code = async (p: Promise<unknown>): Promise<string> => {
@@ -12,8 +13,8 @@ const code = async (p: Promise<unknown>): Promise<string> => {
 };
 
 describe("criação do PRINT_JOB ORIGINAL (INV-1..4)", () => {
-  it.each([1, 10, 30])("quantidade %i cria 1 PRINT_JOB, N LABELs e N tentativas", async (q) => {
-    const { svc, store } = setup();
+  it.each([4, 8, 32])("quantidade %i cria 1 PRINT_JOB, N LABELs e N tentativas", async (q) => {
+    const { svc, store } = setup({ allowedQuantities: ALLOWED_QUANTITIES });
     const { view } = await svc.createOriginal(originalInput({ quantity: q }));
     expect(view.job.kind).toBe("ORIGINAL");
     expect(view.labels).toHaveLength(q);
@@ -26,8 +27,8 @@ describe("criação do PRINT_JOB ORIGINAL (INV-1..4)", () => {
     expect((await store.read().listJobs()).length).toBe(1);
   });
 
-  it.each([0, 2, 5, 31, -1])("rejeita quantidade %i sem criar nada", async (q) => {
-    const { svc, store } = setup();
+  it.each([0, 1, 2, 5, 10, 30, 31, 33, -1])("rejeita quantidade %i sem criar nada", async (q) => {
+    const { svc, store } = setup({ allowedQuantities: ALLOWED_QUANTITIES });
     expect(await code(svc.createOriginal(originalInput({ quantity: q })))).toBe("INVALID_QUANTITY");
     expect((await store.read().listJobs()).length).toBe(0);
     expect((await store.read().listAttempts()).length).toBe(0);
@@ -570,5 +571,12 @@ describe("falha provada, cancelamento, retry e reimpressão", () => {
     expect(
       (await svc.listAudit()).find((e) => e.action === "PRINT_JOB_REQUESTED")!.correlationId,
     ).toBe(input.correlationId);
+  });
+});
+
+describe("quantidades de produção (E-016)", () => {
+  it("o padrão do serviço aceita só 4, 8 e 32 (linhas completas de 4 etiquetas)", () => {
+    expect([...ALLOWED_QUANTITIES]).toEqual([4, 8, 32]);
+    expect(ALLOWED_QUANTITIES.every((q) => q % 4 === 0)).toBe(true);
   });
 });

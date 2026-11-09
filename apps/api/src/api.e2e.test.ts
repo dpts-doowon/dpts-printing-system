@@ -1,6 +1,6 @@
 import type { AddressInfo } from "node:net";
 import type { INestApplication } from "@nestjs/common";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { HttpTransport, MemoryJournal, PrintAgent, SimulatedPrinter } from "@doowon/print-agent";
 import ExcelJS from "exceljs";
 import { createApp } from "./app.js";
@@ -25,11 +25,18 @@ interface Ctx {
 }
 
 let ctx: Ctx;
+// Nos testes de mecanismo as quantidades são variadas; o grupo "quantidades de produção" usa a regra real.
+let strictQuantities = false;
 
 beforeEach(async () => {
   const now = { t: T0 };
   let n = 0;
-  const rt = createRuntime({ clock: () => now.t, newId: () => `id-${++n}` });
+  const rt = createRuntime({
+    clock: () => now.t,
+    newId: () => `id-${++n}`,
+    // Os testes de mecanismo usam quantidades variadas; a regra real (4, 8 e 32) tem testes próprios abaixo.
+    ...(strictQuantities ? {} : { service: { allowedQuantities: [1, 4, 8, 10, 30, 32] } }),
+  });
   await seedDevData(rt, {
     adminPassword: "admin-pass-123",
     operatorPassword: "operator-pass-123",
@@ -187,7 +194,7 @@ describe("fluxo do operador (posto 1)", () => {
     expect(r.body.machines.map((m: any) => m.code)).toEqual(["M01"]);
     expect(r.body.fixedMachine).toBe(true);
     expect(r.body.shift.name).toBe("Turno 2");
-    expect(r.body.quantities).toEqual([1, 10, 30]);
+    expect(r.body.quantities).toEqual([4, 8, 32]);
     expect(r.body.printer.status).toBe("OFFLINE"); // sem heartbeat do agente
   });
 
@@ -211,7 +218,7 @@ describe("fluxo do operador (posto 1)", () => {
     expect(c.body.activeJob).toBeNull();
   });
 
-  it("quantidade fora de 1/10/30 é recusada no servidor", async () => {
+  it("quantidade fora de 4/8/32 é recusada no servidor", async () => {
     const op = await ctx.login("operador1", "operator-pass-123", "st-1");
     const r = await ctx.call("POST", "/operator/print-jobs", { token: op, body: body("p-1", 7) });
     expect(r.status).toBe(400);
@@ -756,5 +763,46 @@ describe("fluxo do protótipo: ajuste, conferência, painel e filtros", () => {
       (await ctx.call("PUT", "/admin/parts/p-1", { token: op, body: { description: "AA111" } }))
         .status,
     ).toBe(403);
+  });
+});
+
+describe("quantidades de produção (E-016)", () => {
+  beforeAll(() => {
+    strictQuantities = true;
+  });
+  afterAll(() => {
+    strictQuantities = false;
+  });
+
+  it("o servidor aceita só 4, 8 e 32 e recusa 1, 10 e 30", async () => {
+    const op = await ctx.login("operador1", "operator-pass-123", "st-1");
+    const c = await ctx.call("GET", "/operator/context", { token: op });
+    expect(c.body.quantities).toEqual([4, 8, 32]);
+    for (const q of [1, 10, 30, 12]) {
+      const r = await ctx.call("POST", "/operator/print-jobs", { token: op, body: body("p-1", q) });
+      expect(r.status).toBe(400);
+      expect(r.body.code).toBe("INVALID_QUANTITY");
+    }
+    const ok = await ctx.call("POST", "/operator/print-jobs", { token: op, body: body("p-1", 8) });
+    expect(ok.status).toBe(201);
+    expect(ok.body.attempts).toHaveLength(8);
+  });
+
+  it("32 etiquetas imprimem em 8 linhas de 4, sem linha incompleta", async () => {
+    const op = await ctx.login("operador1", "operator-pass-123", "st-1");
+    const created = await ctx.call("POST", "/operator/print-jobs", {
+      token: op,
+      body: body("p-1", 32),
+    });
+    expect(created.status).toBe(201);
+    const printer = new SimulatedPrinter();
+    printer.labelsPerRow = 4;
+    const agent = newAgent(TOK1, "st-1", "pr-1", printer);
+    for (let i = 0; i < 8; i++) expect((await agent.tick()).kind).toBe("PRINTED");
+    expect(printer.rows.map((r) => r.length)).toEqual([4, 4, 4, 4, 4, 4, 4, 4]);
+    const done = await ctx.call("GET", `/operator/print-jobs/${created.body.printJobId}`, {
+      token: op,
+    });
+    expect(done.body.status).toBe("COMPLETED");
   });
 });

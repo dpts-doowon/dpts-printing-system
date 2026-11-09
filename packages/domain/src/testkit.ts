@@ -26,7 +26,8 @@ export function setup(config?: Partial<PrintServiceConfig>) {
     store,
     clock: () => t,
     newId: () => `id-${++n}`,
-    ...(config ? { config } : {}),
+    // Os testes de mecanismo usam quantidades variadas; a regra de produção (4, 8 e 32) tem testes próprios.
+    config: { allowedQuantities: [1, 3, 4, 8, 10, 30, 32], ...config },
   });
   const clock = {
     advance: (ms: number) => {
