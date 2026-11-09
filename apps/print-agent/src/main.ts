@@ -1,3 +1,4 @@
+import { buildHkmcQr } from "@doowon/domain";
 import { readFileSync } from "node:fs";
 import { PrintAgent } from "./agent.js";
 import { ConfigError, loadConfig } from "./config.js";
@@ -145,14 +146,15 @@ async function runPrinterTest(
   cfg: ReturnType<typeof loadConfig>,
   printer: PrinterAdapter,
 ): Promise<number> {
-  const qr = JSON.stringify({
-    v: 2,
-    id: "00000000-0000-4000-8000-000000000000",
-    d: "AB123",
-    pn: "PN-0001",
-    op: "Operador 1",
-    t: "Turno 1",
-    ts: Date.now(),
+  const qr = buildHkmcQr({
+    supplierCode: "AQ2A",
+    partNumber: "29135-BP000",
+    alcCode: "AG10",
+    productionDate: "261106",
+    productionTime: "101500",
+    fourM: "OP01",
+    flag: "A",
+    traceNumber: 1,
   });
   const cmd: RenderedCommand = {
     labelId: "TESTE",
@@ -161,10 +163,10 @@ async function runPrinterTest(
     text: "TESTE",
     hash: "teste",
     data: {
-      description: "AB123",
-      partNumber: "PN-0001",
-      operator: "Operador 1",
-      shift: "Turno 1",
+      description: "AG10",
+      partNumber: "29135-BP000",
+      date: "261106",
+      time: "10:15",
       producedAt: new Date().toISOString(),
       qr,
       labelId: "TESTE",
@@ -175,7 +177,7 @@ async function runPrinterTest(
     Array.from({ length: n }, (_, i) => ({
       ...cmd,
       labelId: `TESTE-${i + 1}`,
-      data: { ...cmd.data, labelId: `TESTE-${i + 1}`, description: `AB12${i + 1}` },
+      data: { ...cmd.data, labelId: `TESTE-${i + 1}`, description: `AG1${i}` },
     }));
   const row = testRow(columns);
   console.log(

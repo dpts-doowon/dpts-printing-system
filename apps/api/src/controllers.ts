@@ -122,6 +122,7 @@ export class OperatorController {
     const shift = this.rt.md.currentShift(this.rt.clock(), this.rt.timezone);
     if (!shift)
       throw new DomainError("NOT_ELIGIBLE", "Não há turno vigente. Chame o administrador.");
+    const settings = this.rt.md.getSettings();
     const key = str(b["idempotencyKey"]);
     if (key.length < 8) throw new DomainError("NOT_ELIGIBLE", "Chave de idempotência ausente.");
     const { view, replayed } = await this.rt.svc.createOriginal({
@@ -134,6 +135,14 @@ export class OperatorController {
       allowedMachineIds: this.rt.md.stationMachines.get(station.id) ?? [],
       part: { id: part.id, description: part.description, partNumber: part.partNumber },
       shift: { id: shift.id, name: shift.name },
+      qr: {
+        supplierCode: settings.supplierCode,
+        ...(settings.supplierArea !== "" ? { supplierArea: settings.supplierArea } : {}),
+        ...(part.alcCode ? { alcCode: part.alcCode } : {}),
+        ...(part.eoNumber ? { eoNumber: part.eoNumber } : {}),
+        operatorCode: this.rt.md.users.get(actor.id)?.code ?? "",
+        shiftCode: shift.code ?? "",
+      },
       templateId: "tpl-default",
       templateVersion: 1,
       timezone: this.rt.timezone,
@@ -259,6 +268,10 @@ export class OperatorController {
 }
 
 /** Resumo para a interface: estados por etiqueta, sem termos técnicos além do necessário. */
+/** HHMMSS -> HH:MM (vazio se ausente). */
+const hhmm = (t?: string): string =>
+  t && t.length === 6 ? `${t.slice(0, 2)}:${t.slice(2, 4)}` : "";
+
 function summarize(v: JobView) {
   const labels = v.labels.length ? v.labels : []; // RETRY/REPRINT não criam etiquetas; o resumo usa as tentativas
   const bySeq = new Map(labels.map((l) => [l.labelId, l.sequenceInJob]));
@@ -277,10 +290,10 @@ function summarize(v: JobView) {
       held: a.holdReason !== null,
       // Somente campos do REQ-011 (sem "lote", sem máquina), para a pré-visualização da etiqueta.
       label: {
-        description: a.renderSnapshot.part.description,
+        description: a.renderSnapshot.alcCode || a.renderSnapshot.part.description,
         partNumber: a.renderSnapshot.part.partNumber,
-        operator: a.renderSnapshot.operator.displayName,
-        shift: a.renderSnapshot.shift.name,
+        date: a.renderSnapshot.productionDate ?? "",
+        time: hhmm(a.renderSnapshot.productionTime),
         producedAtUtc: a.renderSnapshot.producedAtUtc,
         qr: a.renderSnapshot.qrContent,
         labelId: a.renderSnapshot.labelId,
@@ -426,6 +439,7 @@ export class AdminController {
       description: str(b["description"]),
       partNumber: str(b["partNumber"]),
       alcCode: str(b["alcCode"]),
+      eoNumber: str(b["eoNumber"]),
     });
   }
   @Get("shifts")
@@ -440,6 +454,7 @@ export class AdminController {
       name: str(b["name"]),
       start: str(b["start"]),
       end: str(b["end"]),
+      code: str(b["code"]),
     });
   }
   @Get("operators")
@@ -455,8 +470,19 @@ export class AdminController {
       displayName: str(b["displayName"]),
       role: b["role"] === "ADMIN" ? "ADMIN" : "OPERATOR",
       password: str(b["password"]),
+      code: str(b["code"]),
     });
     return u;
+  }
+  @Get("settings")
+  settings(@Req() req: Request) {
+    this.ctx(req);
+    return this.rt.md.getSettings();
+  }
+  @Put("settings")
+  async updateSettings(@Body() b: Json, @Req() req: Request) {
+    const { s } = this.ctx(req);
+    return this.rt.md.updateSettings(s.userId, b);
   }
   @Put(":kind/:id")
   async update(

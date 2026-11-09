@@ -45,6 +45,11 @@ export interface LabelSnapshot {
   shift: { id: string; name: string };
   producedAtUtc: string;
   timezone: string;
+  /** Campos impressos na etiqueta (padrão H/KMC): ALC em destaque, data AAMMDD e hora HHMMSS locais. */
+  alcCode?: string;
+  productionDate?: string;
+  productionTime?: string;
+  traceNumber?: number;
   qrContent: string;
   qrSchemaVersion: string;
   templateId: string;

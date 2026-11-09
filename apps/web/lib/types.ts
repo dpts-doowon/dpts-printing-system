@@ -8,8 +8,9 @@ export interface AttemptSummary {
   label: {
     description: string;
     partNumber: string;
-    operator: string;
-    shift: string;
+    /** AAMMDD e HH:MM, impressos na etiqueta. */
+    date: string;
+    time: string;
     producedAtUtc: string;
     qr: string;
     labelId: string;

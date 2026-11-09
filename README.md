@@ -112,7 +112,7 @@ Implementado e testado (sem AWS e sem impressora real):
 
 Provisório, aguardando decisões (não são dados da Doowon): turnos, peças e usuários de partida; fuso horário; conteúdo do QR e layout da etiqueta; vínculo posto-máquina fixo 1:1; política de sessão.
 
-Layout provisório da etiqueta (30 x 20 mm, PROVISIONAL, pendente de validação da Doowon): descrição (2 letras + 3 números) na maior fonte, Part Number em fonte pequena, operador, turno e data/hora de produção, e um único QR Code com a carga da peça e da produção (JSON compacto versionado, schema 2). Conteúdo do QR e layout finais: D-009/D-010/D-036.
+Etiqueta (30 x 20 mm, deitada em célula 22 x 35): impressos o ALC Code em destaque, o Part Number, a data (AAMMDD) e a hora; operador e turno não são impressos. O QR segue o padrão H/KMC da Hyundai (`[)>` RS `06` GS … GS RS EOT; Supplier Code, Part Number sem hífen, ALC, EO Number opcional, data, código 4M do operador, flag do turno e Trace Number sequencial). Supplier Code e Área do Fornecedor ficam em Configurações do admin; EO Number na peça; código de 4 caracteres no operador e de 1 caractere no turno. PROVISÓRIO até a Doowon confirmar flag, hora e Trace Number (E-024, D-009/D-036).
 
 Persistência PostgreSQL (`packages/store-postgres`): impressões, etiquetas, tentativas, auditoria (append-only, bloqueada por gatilhos), agentes e cadastros, com migrações versionadas. A mesma suíte de testes do domínio roda contra o banco real. Sem `DATABASE_URL`, a API continua em memória.
 

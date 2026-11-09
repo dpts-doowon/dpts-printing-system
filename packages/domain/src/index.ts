@@ -4,3 +4,4 @@ export * from "./states.js";
 export * from "./hash.js";
 export * from "./store.js";
 export * from "./service.js";
+export * from "./hkmc-qr.js";

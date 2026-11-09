@@ -28,7 +28,7 @@
 | ID | Requisito | Fonte |
 |---|---|---|
 | REQ-010 | A etiqueta física tem 30 mm x 20 mm. | Escopo confirmado |
-| REQ-011 | Informações conhecidas da etiqueta: descrição da peça (2 letras + 3 números, em destaque), Part Number, operador logado, turno, data/hora de produção, QR Code e identificador único de rastreabilidade. Nenhum outro campo (inclusive "Lote de produção", D-039) entra na etiqueta sem confirmação da Doowon. | Escopo confirmado; reafirmado em 2026-10-07; quantidades alteradas em 2026-11-06 (relato, fonte Doowon a identificar) |
+| REQ-011 | Informações conhecidas da etiqueta (atualizado em 2026-11-06, relato): impressos o ALC Code (Sequence Code, em destaque), Part Number, data de produção (AAMMDD) e hora; operador e turno seguem apenas no QR (4M e flag), no padrão H/KMC da Hyundai (E-024), mais o identificador único de rastreabilidade. Nenhum outro campo (inclusive "Lote de produção", D-039) entra na etiqueta sem confirmação da Doowon. | Escopo confirmado; reafirmado em 2026-10-07; quantidades alteradas em 2026-11-06 (relato, fonte Doowon a identificar) |
 | REQ-012 | Cada etiqueta lógica (LABEL) criada para produção recebe um identificador único e imutável. Um pedido de 30 etiquetas gera **1 PRINT_JOB** (o pedido do operador) e **30 LABELs independentes**, cada uma com seu próprio `label_id`. PRINT_JOB e LABEL são entidades distintas (`printing-state-machine.md` §2). | Escopo confirmado |
 | REQ-013 | O sistema registra dados de rastreabilidade e histórico de impressão. | Escopo confirmado |
 | REQ-014 | Reimpressões são controladas e auditadas, exigem motivo, ator e data/hora, e preservam o histórico anterior. | Escopo confirmado |

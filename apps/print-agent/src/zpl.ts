@@ -93,6 +93,20 @@ export function formatLocal(iso: string, timezone: string): string {
 }
 
 /**
+ * Data (AAMMDD) e hora (HH:MM) impressas. Vêm prontas do snapshot da etiqueta; sem elas (etiquetas antigas),
+ * derivam de `producedAt` no fuso configurado.
+ */
+export function printedWhen(
+  d: Record<string, string>,
+  timezone: string,
+): { date: string; time: string } {
+  if (d["date"] && d["time"]) return { date: d["date"], time: d["time"] };
+  const [wd = "", wt = ""] = formatLocal(d["producedAt"] ?? "", timezone).split(" ");
+  const [dd = "", mm = "", yy = ""] = wd.split("/");
+  return { date: `${yy}${mm}${dd}`, time: wt };
+}
+
+/**
  * Ajusta um texto à largura disponível: reduz a largura do caractere (e a altura, para manter a proporção) e,
  * se ainda não couber com o mínimo legível, corta o texto. Evita que a linha invada o QR ou saia da etiqueta.
  */
@@ -136,8 +150,7 @@ export function buildZpl(cmd: RenderedCommand, o: ZplOptions = DEFAULT_ZPL): str
     return field(leftX, y, f.h, f.w, f.text);
   };
 
-  const [wd = "", wt = ""] = formatLocal(d["producedAt"] ?? "", o.timezone).split(" ");
-  const when = { date: wd, time: wt };
+  const when = printedWhen(d, o.timezone);
   const tracking = { gap: "^MNY", mark: "^MNM", continuous: "^MNN" }[o.mediaTracking];
   const mt = o.printMode === "thermal-transfer" ? "^MTT" : "^MTD";
   const lines = [
@@ -150,14 +163,12 @@ export function buildZpl(cmd: RenderedCommand, o: ZplOptions = DEFAULT_ZPL): str
     tracking,
     mt,
     ...(o.darkness !== undefined ? [`~SD${String(Math.round(o.darkness)).padStart(2, "0")}`] : []),
-    // Descrição da peça: maior destaque, linha superior.
-    field(dots(1), dots(0.8), dots(5.4), dots(4.4), d["description"] ?? ""),
-    // Coluna esquerda, abaixo da descrição (5 linhas curtas; data e hora em linhas separadas para caberem).
-    left(dots(7.2), dots(2.1), dots(1.7), d["partNumber"] ?? ""),
-    left(dots(9.6), dots(2.0), dots(1.6), d["operator"] ?? ""),
-    left(dots(12.0), dots(2.0), dots(1.6), d["shift"] ?? ""),
-    left(dots(14.4), dots(2.0), dots(1.6), when.date),
-    left(dots(16.8), dots(2.0), dots(1.6), when.time),
+    // ALC Code (Sequence Code): maior destaque, linha superior.
+    field(dots(1), dots(0.8), dots(5.2), dots(4.2), d["description"] ?? ""),
+    // Coluna esquerda, abaixo do ALC: Part Number, data (AAMMDD) e hora.
+    left(dots(8.2), dots(2.4), dots(1.9), d["partNumber"] ?? ""),
+    left(dots(11.2), dots(2.4), dots(1.9), when.date),
+    left(dots(14.2), dots(2.4), dots(1.9), when.time),
     // QR único (correção M, modelo 2).
     `^FO${qrX},${qrY}^BQN,2,${mag}^FH^FDMA,${zplEscape(qr)}^FS`,
     "^PQ1",
@@ -238,13 +249,11 @@ function portraitCell(cmd: RenderedCommand, o: ZplOptions, ox: number, oy: numbe
     const f = fitText(text, dots(hMm), dots(wMm), avail, minW);
     return `^FO${ox + margin},${oy + dots(yMm)}^A0N,${f.h},${f.w}^FH^FD${zplEscape(f.text)}^FS`;
   };
-  const when = formatLocal(d["producedAt"] ?? "", o.timezone);
+  const when = printedWhen(d, o.timezone);
   return [
-    field(1.0, 5.4, 4.4, d["description"] ?? ""),
-    field(7.2, 2.1, 1.7, d["partNumber"] ?? ""),
-    field(9.7, 2.0, 1.6, d["operator"] ?? ""),
-    field(12.1, 2.0, 1.6, d["shift"] ?? ""),
-    field(14.5, 2.0, 1.6, when),
+    field(1.0, 5.2, 4.2, d["description"] ?? ""),
+    field(8.2, 2.4, 1.9, d["partNumber"] ?? ""),
+    field(11.0, 2.4, 1.9, `${when.date} ${when.time}`),
     `^FO${ox + Math.round((dots(w) - qrDots) / 2)},${oy + dots(17.2)}^BQN,2,${mag}^FH^FDMA,${zplEscape(qr)}^FS`,
   ];
 }
@@ -282,18 +291,17 @@ function landscapeOnPortraitCell(
     `^FO${ox + cellW - vy - f.h},${oy + vx}^A0R,${f.h},${f.w}^FH^FD${zplEscape(f.text)}^FS`;
   const left = (yMm: number, hMm: number, wMm: number, text: string): string =>
     put(leftVx, dots(offY + yMm), fitText(text, dots(hMm), dots(wMm), leftAvail, minW));
-  const [wd = "", wt = ""] = formatLocal(d["producedAt"] ?? "", o.timezone).split(" ");
+  const when = printedWhen(d, o.timezone);
   return [
-    put(dots(offX + 1), dots(offY + 0.8), {
-      text: d["description"] ?? "",
-      h: dots(5.4),
-      w: dots(4.4),
-    }),
-    left(7.2, 2.1, 1.7, d["partNumber"] ?? ""),
-    left(9.6, 2.0, 1.6, d["operator"] ?? ""),
-    left(12.0, 2.0, 1.6, d["shift"] ?? ""),
-    left(14.4, 2.0, 1.6, wd),
-    left(16.8, 2.0, 1.6, wt),
+    // ALC Code (Sequence Code) em destaque, na largura toda do desenho deitado.
+    put(
+      dots(offX + 1),
+      dots(offY + 0.8),
+      fitText(d["description"] ?? "", dots(5.2), dots(4.2), dots(LABEL_W_MM - 2), minW),
+    ),
+    left(8.2, 2.4, 1.9, d["partNumber"] ?? ""),
+    left(11.2, 2.4, 1.9, when.date),
+    left(14.2, 2.4, 1.9, when.time),
     `^FO${ox + cellW - qrVy - qrDots},${oy + qrVx}^BQN,2,${mag}^FH^FDMA,${zplEscape(qr)}^FS`,
   ];
 }
