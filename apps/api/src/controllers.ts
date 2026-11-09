@@ -13,6 +13,7 @@ import {
   Res,
 } from "@nestjs/common";
 import {
+  ALLOWED_QUANTITIES,
   DomainError,
   type AgentInfo,
   type AttemptResult,
@@ -103,7 +104,7 @@ export class OperatorController {
       parts: [...this.rt.md.parts.values()]
         .filter((p) => p.active)
         .map((p) => ({ id: p.id, description: p.description, partNumber: p.partNumber })),
-      quantities: [1, 10, 30],
+      quantities: [...ALLOWED_QUANTITIES],
       activeJob: active ? summarize(active) : null,
     };
   }

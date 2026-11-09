@@ -44,7 +44,7 @@ Fechar, em uma reunião de 90 minutos, as informações que destravam a fundaç�
 | Horário | Tema | Objetivo | Itens de referência | Decisões |
 |---|---|---|---|---|
 | 0–5 | Abertura | Objetivos, papéis, forma de classificar respostas, datas de kickoff e liberação de dependências | I1–I5 | D-026 |
-| 5–15 | Fluxo, escopo e vínculo posto–máquina | Alinhar o fluxo do operador, os 2 postos (cada um com impressora dedicada, a evidenciar), os botões 1/10/30 e a recomendação de vínculo fixo 1:1 entre posto e máquina | G (fluxo), D9 | D-040, D-038 |
+| 5–15 | Fluxo, escopo e vínculo posto–máquina | Alinhar o fluxo do operador, os 2 postos (cada um com impressora dedicada, a evidenciar), os botões 4/8/32 e a recomendação de vínculo fixo 1:1 entre posto e máquina | G (fluxo), D9 | D-040, D-038 |
 | 15–30 | Impressora | Modelo, DPI, linguagem/SDK, conexão, documentação, unidade de teste, prazo de decisão | E1–E13 | D-007 |
 | 30–45 | GitHub e AWS | Repositório, conta, região, topologia, serviços aprovados, IAM, DNS/TLS, logs, processo de mudança, padrões de tecnologia | A1–A7, B1–B20 | D-001 a D-004, D-022 |
 | 45–60 | Segurança e identidade | SSO vs autenticação local, MFA, política de senha/sessão, login do operador, varreduras/pentest, SBOM e licenças, retenção/LGPD | C1–C13, B18 | D-005, D-021, D-023, D-033 |

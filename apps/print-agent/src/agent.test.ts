@@ -23,6 +23,8 @@ function world() {
     store: new InMemoryPrintStore(),
     clock: () => t,
     newId: () => `id-${++n}`,
+    // Testes de mecanismo usam quantidades variadas; a regra de produção (4, 8 e 32) é testada no domínio e na API.
+    config: { allowedQuantities: [1, 3, 4, 8, 10, 30, 32] },
   });
   const printer = new SimulatedPrinter();
   const journal = new MemoryJournal();

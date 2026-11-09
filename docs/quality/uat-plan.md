@@ -11,7 +11,7 @@ Comprovar, com evidência, que a solução atende aos requisitos confirmados (`c
 
 ## 2. Escopo
 
-**Dentro:** administração (máquinas, operadores, peças, turnos), fluxo do operador, impressão de 1/10/30, rastreabilidade, reimpressão, comportamento em falhas, operação simultânea de duas estações, segurança funcional, implantação.
+**Dentro:** administração (máquinas, operadores, peças, turnos), fluxo do operador, impressão de 4/8/32, rastreabilidade, reimpressão, comportamento em falhas, operação simultânea de duas estações, segurança funcional, implantação.
 
 **Fora:** integrações não confirmadas (ERP, MES, SSO se não confirmado, PLCs, scanners como parte da solução), operação sem rede, hardware.
 
@@ -74,11 +74,11 @@ Cada caso tem resultado: **Passou / Falhou / Bloqueado**, com evidência.
 | UAT-OP-04 | Conferir resumo antes de imprimir | Operador, máquina, peça, PN, turno, impressora vinculada (somente leitura) e quantidade visíveis | REQ-004, REQ-036 |
 | UAT-OP-05 | Imprimir 1 | 1 etiqueta, 1 `label_id`, status confirmado | REQ-005, TRC-01 **[BLOQUEADO por D-007]** |
 | UAT-OP-06 | Imprimir 10 | 10 etiquetas, 10 `label_id` distintos | REQ-005, TRC-02 **[BLOQUEADO por D-007]** |
-| UAT-OP-07 | Imprimir 30 | 30 etiquetas, 30 `label_id` distintos | REQ-005, TRC-02 **[BLOQUEADO por D-007]** |
+| UAT-OP-07 | Imprimir 32 | 32 etiquetas (8 linhas de 4), 32 `label_id` distintos | REQ-005, TRC-02 **[BLOQUEADO por D-007]** |
 | UAT-OP-08 | Operador tenta abrir tela de administração | Acesso negado | REQ-019, SEC-03 |
 | UAT-OP-09 | Confirmar saída das etiquetas | Estado registrado com evidência | REQ-006 |
 | UAT-OP-10 | Sessão expira | Mensagem simples; reentrada sem perda indevida | SEC-06 |
-| UAT-OP-12 | Verificar que não existe campo de quantidade livre nem seletor de impressora na tela do operador | Somente botões 1, 10 e 30; impressora exibida sem possibilidade de escolha | REQ-005, REQ-036, FUN-02, FUN-09 |
+| UAT-OP-12 | Verificar que não existe campo de quantidade livre nem seletor de impressora na tela do operador | Somente botões 4, 8 e 32; impressora exibida sem possibilidade de escolha | REQ-005, REQ-036, FUN-02, FUN-09 |
 | UAT-OP-13 | O OPERATOR do Posto 01 consulta o status de impressora, inclusive tentando acessar a do Posto 02 | Vê só a Impressora 01; o acesso à Impressora 02 é negado ou omitido | REQ-036, FUN-11 |
 | UAT-OP-14 | O OPERATOR procura versão ou status técnico do Print Agent | Não é exibido | FUN-14 |
 | UAT-OP-11 | Operador sem treinamento completa o fluxo | Conclui sem ajuda; observações de usabilidade registradas | REQ-026, FUN-07 |
@@ -115,7 +115,7 @@ Cada caso tem resultado: **Passou / Falhou / Bloqueado**, com evidência.
 | UAT-IDM-02 | Atualizar a página durante a impressão | Retoma o PRINT_JOB ativo; sem novo pedido | REC-01 |
 | UAT-IDM-03 | Segundo pedido (outra chave) na mesma impressora com PRINT_JOB ativo | Bloqueado com "Impressora em uso"; 0 PRINT_JOB/LABEL/PRINT_ATTEMPT novos; rejeição registrada | REC-01, REC-20, E-005 |
 | UAT-IDM-04 | Repetir a mesma requisição (ferramenta de teste) | Mesmo `print_job_id`; 0 etiquetas novas | REC-02 |
-| UAT-IDM-05 | Quantidade fora de 1/10/30 via API | Rejeitada | FUN-02 |
+| UAT-IDM-05 | Quantidade fora de 4/8/32 via API | Rejeitada | FUN-02 |
 
 ### 5.6 Falhas de impressão e PRINT_JOB parcial
 
@@ -193,7 +193,7 @@ Para cada impressora e mídia 30 x 20 mm, registrar:
 
 | Teste | Observação |
 |---|---|
-| 1, 10 e 30 etiquetas | Contagem, alinhamento, corte/destacamento |
+| 4, 8 e 32 etiquetas | Contagem, alinhamento, corte/destacamento |
 | Texto menor legível | Menor fonte legível na etiqueta |
 | QR em amostra de 100 | Leitura 100% (TRC-09) |
 | Volume sustentado | Conforme D-008 |

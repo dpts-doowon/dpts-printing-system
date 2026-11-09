@@ -118,7 +118,7 @@ Todas abaixo estão **OPEN ou RECOMMENDED**: cada recomendação depende de conf
 
 ### D-031 Estratégia para PRINT_JOB parcialmente impresso
 
-**Problema:** em um PRINT_JOB de 10 ou 30 etiquetas, uma falha no meio deixa parte das etiquetas físicas impressas e parte não. Exemplo modelado: 17 confirmadas, 1 `UNKNOWN_OUTCOME`, 12 não enviadas (`printing-state-machine.md` §10.1).
+**Problema:** em um PRINT_JOB de 8 ou 32 etiquetas, uma falha no meio deixa parte das etiquetas físicas impressas e parte não. Exemplo modelado: 17 confirmadas, 1 `UNKNOWN_OUTCOME`, 12 não enviadas (`printing-state-machine.md` §10.1).
 
 **Direção recomendada (detalhes em `printing-state-machine.md`):**
 - Um pedido gera 1 PRINT_JOB e N LABELs independentes; cada LABEL tem `label_id`, snapshot e tentativas próprios; o estado do PRINT_JOB é derivado.
@@ -174,7 +174,7 @@ Todas abaixo estão **OPEN ou RECOMMENDED**: cada recomendação depende de conf
 | E-013 | Auditoria, snapshots, tentativas e despachos append-only; correção por novo evento | DECIDIDO-INTERNO | `printing-state-machine.md` §4.8 |
 | E-014 | Dados mestres com histórico são inativados, nunca excluídos | DECIDIDO-INTERNO (política de retenção: D-023) | `printing-state-machine.md` §4.9 |
 | E-015 | Atualização do agente nunca com PRINT_JOB ativo; versão anterior preservada; rollback ensaiado (mecanismo: D-028) | DECIDIDO-INTERNO | `printing-state-machine.md` §8.3 |
-| E-016 | **Quantidade fixa na V1:** somente 1, 10 e 30; sem campo de quantidade livre na interface ou na API | RESOLVED (2026-10-07) | `confirmed-requirements.md` REQ-005 |
+| E-016 | **Quantidade fixa na V1:** somente 4, 8 e 32 (alterado em 2026-11-06 a pedido da Doowon, relato, fonte a identificar: a mídia imprime 4 etiquetas por linha e assim nenhuma etiqueta é desperdiçada; antes: 1, 10 e 30); sem campo de quantidade livre na interface ou na API | RESOLVED (2026-10-07; atualizado em 2026-11-06) | `confirmed-requirements.md` REQ-005 |
 | E-017 | **Impressora dedicada ao posto:** o operador vê o status, mas nunca escolhe a impressora (reforça E-006) | RESOLVED (2026-10-07); D-018 RESOLVED | REQ-036 |
 | E-018 | **Sem fila na V1:** impressora do posto ocupada bloqueia o novo comando antes de criar PRINT_JOB e mostra mensagem clara (reforça E-005); o bloqueio de um posto não afeta o outro | RESOLVED (2026-10-07) | REQ-037; `printing-state-machine.md` §6.4 |
 | E-019 | **Campos da etiqueta limitados a REQ-011:** descrição da peça (2 letras + 3 números), Part Number, operador, turno, data de produção, QR Code e identificador único. "Lote de produção" e outros campos só com confirmação da Doowon | RESOLVED (2026-10-07); D-039 e D-010 seguem abertas | REQ-011 |
