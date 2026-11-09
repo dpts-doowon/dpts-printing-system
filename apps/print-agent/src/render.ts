@@ -9,21 +9,23 @@ export function renderLabel(a: ClaimedAttemptDto): RenderedCommand {
   const s = a.renderSnapshot;
   if (!s.part.description || !s.part.partNumber || !s.qrContent)
     throw new Error("snapshot incompleto para renderização");
+  // Etiqueta (Doowon, 2026-11-06): ALC em destaque, Part Number, data (AAMMDD) e hora. Operador e turno
+  // seguem no QR (4M e flag), mas não são impressos.
+  const hhmmss = s.productionTime ?? "";
   const data: Record<string, string> = {
-    description: s.part.description,
+    description: s.alcCode || s.part.description,
     partNumber: s.part.partNumber,
-    operator: s.operator.displayName,
-    shift: s.shift.name,
+    ...(s.productionDate ? { date: s.productionDate } : {}),
+    ...(hhmmss.length === 6 ? { time: `${hhmmss.slice(0, 2)}:${hhmmss.slice(2, 4)}` } : {}),
     producedAt: s.producedAtUtc,
     qr: s.qrContent,
     labelId: s.labelId,
   };
   const text = [
-    `DESC: ${data.description}`,
+    `ALC: ${data.description}`,
     `PN: ${data.partNumber}`,
-    `OP: ${data.operator}`,
-    `TURNO: ${data.shift}`,
-    `DATA: ${data.producedAt}`,
+    `DATA: ${data.date ?? data.producedAt}`,
+    `HORA: ${data.time ?? ""}`,
     `QR: ${data.qr}`,
     `ID: ${data.labelId}`,
   ].join("\n");

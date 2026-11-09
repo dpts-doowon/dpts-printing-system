@@ -6,13 +6,15 @@ import { ApiError, api, download, newKey } from "../lib/api";
 import type { JobSummary } from "../lib/types";
 import { Logo } from "./Brand";
 
-type Tab = "painel" | "maquinas" | "operadores" | "pecas" | "turnos" | "historico" | "auditoria";
+type Tab =
+  "painel" | "maquinas" | "operadores" | "pecas" | "turnos" | "config" | "historico" | "auditoria";
 const TABS: [Tab, string][] = [
   ["painel", "Dashboard"],
   ["maquinas", "Máquinas"],
   ["operadores", "Operadores"],
   ["pecas", "Peças / Modelos"],
   ["turnos", "Turnos"],
+  ["config", "Configurações"],
   ["historico", "Histórico"],
   ["auditoria", "Auditoria"],
 ];
@@ -53,9 +55,11 @@ export function Admin({ name, onLogout }: { name: string; onLogout: () => void }
             fields={[
               ["username", "Usuário"],
               ["displayName", "Nome"],
+              ["code", "Código 4M (4 caracteres, ex.: OP01)"],
               ["password", "Senha (mín. 8)"],
             ]}
             secret="password"
+            clearable={["code"]}
           />
         )}
         {tab === "pecas" && (
@@ -66,7 +70,9 @@ export function Admin({ name, onLogout }: { name: string; onLogout: () => void }
               ["description", "Descrição (2 letras + 3 números; vazio = usa o ALC)"],
               ["alcCode", "ALC Code (ex.: AG10)"],
               ["partNumber", "Part Number"],
+              ["eoNumber", "EO Number / nº do desenho (opcional, 8 a 9 caracteres)"],
             ]}
+            clearable={["eoNumber"]}
           />
         )}
         {tab === "turnos" && (
@@ -77,9 +83,12 @@ export function Admin({ name, onLogout }: { name: string; onLogout: () => void }
               ["name", "Nome"],
               ["start", "Início (HH:MM)"],
               ["end", "Fim (HH:MM)"],
+              ["code", "Código do turno (1 caractere; o leitor da Hyundai só aceita A ou @)"],
             ]}
+            clearable={["code"]}
           />
         )}
+        {tab === "config" && <Settings />}
         {tab === "historico" && <History />}
         {tab === "auditoria" && <Audit />}
       </div>
@@ -422,11 +431,14 @@ function Master({
   title,
   fields,
   secret,
+  clearable = [],
 }: {
   kind: string;
   title: string;
   fields: [string, string][];
   secret?: string;
+  /** Campos que podem ser esvaziados ao editar (enviados mesmo em branco). */
+  clearable?: string[];
 }) {
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -459,7 +471,9 @@ function Master({
     );
   };
   const save = (): Promise<void> => {
-    const body = Object.fromEntries(Object.entries(form).filter(([, v]) => v !== ""));
+    const body = Object.fromEntries(
+      Object.entries(form).filter(([k, v]) => v !== "" || clearable.includes(k)),
+    );
     return act(() =>
       editId ? api("PUT", `/admin/${kind}/${editId}`, body) : api("POST", `/admin/${kind}`, form),
     );
@@ -560,6 +574,64 @@ function Master({
               Cancelar edição
             </button>
           )}
+        </p>
+      </div>
+    </>
+  );
+}
+
+interface SettingsData {
+  supplierCode: string;
+  supplierArea: string;
+}
+
+/** Configurações globais do QR no padrão H/KMC (Doowon, 2026-11-06). */
+function Settings() {
+  const [f, setF] = useState<SettingsData>({ supplierCode: "", supplierArea: "" });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    void api<SettingsData>("GET", "/admin/settings").then(setF);
+  }, []);
+  const save = async (): Promise<void> => {
+    setMsg(null);
+    try {
+      setF(await api<SettingsData>("PUT", "/admin/settings", f));
+      setMsg({ ok: true, text: "Configurações salvas." });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof ApiError ? e.message : "Erro" });
+    }
+  };
+  return (
+    <>
+      <div className="head">
+        <h1 className="grow">Configurações</h1>
+      </div>
+      {msg && (
+        <div className={`msg ${msg.ok ? "ok" : "err"}`} role={msg.ok ? "status" : "alert"}>
+          {msg.text}
+        </div>
+      )}
+      <div className="card">
+        <h3>QR Code (padrão H/KMC)</h3>
+        <label htmlFor="s-supplier">Supplier Code (4 caracteres, igual para todas as peças)</label>
+        <input
+          id="s-supplier"
+          maxLength={4}
+          value={f.supplierCode}
+          onChange={(e) => setF({ ...f, supplierCode: e.target.value.toUpperCase() })}
+        />
+        <label htmlFor="s-area">Área do Fornecedor (opcional, até 50 caracteres)</label>
+        <input
+          id="s-area"
+          maxLength={50}
+          value={f.supplierArea}
+          onChange={(e) => setF({ ...f, supplierArea: e.target.value })}
+        />
+        <p className="small">
+          O Trace Number é sequencial automático (1, 2, 3, ...) e a hora é registrada na impressão.
+        </p>
+        <p className="row">
+          <button onClick={() => void save()}>Salvar</button>
         </p>
       </div>
     </>

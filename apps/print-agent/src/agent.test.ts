@@ -49,8 +49,9 @@ function world() {
     printerId: "pr-1",
     machine: { id: "m-1", code: "M01" },
     allowedMachineIds: ["m-1"],
-    part: { id: "p-1", description: "AB123", partNumber: "PN-001" },
+    part: { id: "p-1", description: "AB123", partNumber: "29135-BP000" },
     shift: { id: "s-1", name: "Turno 1" },
+    qr: { supplierCode: "AQ2A", alcCode: "AG10", operatorCode: "OP01", shiftCode: "A" },
     templateId: "tpl",
     templateVersion: 1,
     timezone: "America/Sao_Paulo",
@@ -79,8 +80,15 @@ describe("Print Agent + simulador", () => {
     const c = w.printer.printed[0]!;
     expect([c.widthMm, c.heightMm]).toEqual([30, 20]);
     expect(Object.keys(c.data).sort()).toEqual(
-      ["description", "labelId", "operator", "partNumber", "producedAt", "qr", "shift"].sort(),
+      ["date", "description", "labelId", "partNumber", "producedAt", "qr", "time"].sort(),
     );
+    // Só o que a Doowon pediu na etiqueta: ALC, Part Number, data e hora (sem operador e turno).
+    expect(c.data["description"]).toBe("AG10");
+    expect(c.data["partNumber"]).toBe("29135-BP000");
+    expect(c.data["date"]).toMatch(/^\d{6}$/);
+    expect(c.data["time"]).toMatch(/^\d{2}:\d{2}$/);
+    expect(c.text).not.toContain("OP:");
+    expect(c.text).not.toContain("TURNO");
     expect(c.text.toLowerCase()).not.toContain("lote");
   });
 
@@ -130,7 +138,12 @@ describe("Print Agent + simulador", () => {
 
   it("erro de renderização termina em FAILED sem enviar nada", async () => {
     const w = world();
-    await w.svc.createOriginal(w.input({ part: { id: "p", description: "", partNumber: "PN" } }));
+    await w.svc.createOriginal(
+      w.input({
+        part: { id: "p", description: "", partNumber: "29135-BP000" },
+        qr: { supplierCode: "AQ2A", operatorCode: "OP01", shiftCode: "A" },
+      }),
+    );
     const r = await w.mkAgent().tick();
     expect(r).toMatchObject({ kind: "FAILED", failureClass: "RENDER_ERROR" });
     expect(w.printer.received).toHaveLength(0);

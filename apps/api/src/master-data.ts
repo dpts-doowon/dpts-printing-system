@@ -39,6 +39,8 @@ export interface Part {
   partNumber: string;
   /** ALC Code (D-042): cadastrado pelo admin; quando a descrição não é informada, o texto grande da etiqueta usa o ALC. */
   alcCode?: string;
+  /** EO Number (número do desenho): opcional, varia por Part Number; vazio ou 8 a 9 caracteres. */
+  eoNumber?: string;
   active: boolean;
 }
 export interface Shift {
@@ -46,6 +48,8 @@ export interface Shift {
   name: string;
   start: string;
   end: string;
+  /** Código de 1 caractere do turno, impresso no campo flag do Trace do QR. */
+  code?: string;
   active: boolean;
 }
 export interface UserRec {
@@ -54,15 +58,58 @@ export interface UserRec {
   displayName: string;
   role: Role;
   passwordHash: string;
+  /** Código de 4 caracteres do operador (4M do QR). */
+  code?: string;
+  active: boolean;
+}
+/** Configurações globais do QR (registro único, id "global"). */
+export interface Settings {
+  id: string;
+  /** Supplier Code: 4 caracteres, igual para todas as peças. */
+  supplierCode: string;
+  /** Área do Fornecedor (campo C do QR): opcional, até 50 caracteres. */
+  supplierArea: string;
   active: boolean;
 }
 
 /** REQ-011: descrição da peça = 2 letras + 3 números. Regra de validação formal: D-024 (OPEN). */
 export const PART_DESCRIPTION_PATTERN = /^[A-Z]{2}\d{3}$/;
 export const ALC_CODE_PATTERN = /^[A-Z0-9]{2,10}$/;
+export const OPERATOR_CODE_PATTERN = /^[A-Z0-9]{4}$/;
+export const SHIFT_CODE_PATTERN = /^[A-Z0-9@]$/;
+export const SUPPLIER_CODE_PATTERN = /^[A-Z0-9]{4}$/;
 
-type Kind = "machines" | "parts" | "shifts" | "users";
-const KINDS: Kind[] = ["machines", "parts", "shifts", "users"];
+type Kind = "machines" | "parts" | "shifts" | "users" | "settings";
+const KINDS: Kind[] = ["machines", "parts", "shifts", "users", "settings"];
+
+const EO_MSG = "O EO Number deve ficar vazio ou ter de 8 a 9 caracteres.";
+const checkEo = (v: unknown): string => {
+  const eo = String(v ?? "").trim();
+  if (eo !== "" && (eo.length < 8 || eo.length > 9)) throw new DomainError("NOT_ELIGIBLE", EO_MSG);
+  return eo;
+};
+const checkOperatorCode = (v: unknown): string => {
+  const c = String(v ?? "")
+    .trim()
+    .toUpperCase();
+  if (c !== "" && !OPERATOR_CODE_PATTERN.test(c))
+    throw new DomainError(
+      "NOT_ELIGIBLE",
+      "O código do operador deve ter exatamente 4 letras ou números (ex.: OP01).",
+    );
+  return c;
+};
+const checkShiftCode = (v: unknown): string => {
+  const c = String(v ?? "")
+    .trim()
+    .toUpperCase();
+  if (c !== "" && !SHIFT_CODE_PATTERN.test(c))
+    throw new DomainError(
+      "NOT_ELIGIBLE",
+      "O código do turno deve ter 1 caractere (letra, número ou @).",
+    );
+  return c;
+};
 
 /** Persistência opcional dos cadastros (PostgreSQL). Sem ela, os dados ficam só em memória. */
 export interface MasterDataRepo {
@@ -84,6 +131,7 @@ export class MasterData {
   parts = new Map<string, Part>();
   shifts = new Map<string, Shift>();
   users = new Map<string, UserRec>();
+  settings = new Map<string, Settings>();
   /** Token do agente -> posto (credencial por estação; inscrição em duas etapas é uma fatia futura, D-027). */
   agentTokens = new Map<string, string>();
 
@@ -145,7 +193,11 @@ export class MasterData {
     actor: string,
     v: Omit<UserRec, "id" | "active" | "passwordHash"> & { password: string },
   ): Promise<UserRec>;
-  async create(kind: Kind, actor: string, v: Record<string, unknown>): Promise<unknown> {
+  async create(
+    kind: Exclude<Kind, "settings">,
+    actor: string,
+    v: Record<string, unknown>,
+  ): Promise<unknown> {
     const id = this.newId();
     let rec: { id: string; active: boolean };
     if (kind === "parts") {
@@ -172,11 +224,13 @@ export class MasterData {
       if (partNumber === "") throw new DomainError("NOT_ELIGIBLE", "Informe o Part Number.");
       if ([...this.parts.values()].some((p) => p.partNumber === partNumber))
         throw new DomainError("NOT_ELIGIBLE", "Já existe uma peça com este Part Number.");
+      const eoNumber = checkEo(v["eoNumber"]);
       rec = {
         id,
         description,
         partNumber,
         ...(alcCode !== "" ? { alcCode } : {}),
+        ...(eoNumber !== "" ? { eoNumber } : {}),
         active: true,
       } as Part;
     } else if (kind === "machines") {
@@ -191,7 +245,15 @@ export class MasterData {
       const end = String(v["end"] ?? "");
       if (!re.test(start) || !re.test(end))
         throw new DomainError("NOT_ELIGIBLE", "Horários devem estar no formato HH:MM.");
-      rec = { id, name: String(v["name"] ?? "").trim(), start, end, active: true } as Shift;
+      const code = checkShiftCode(v["code"]);
+      rec = {
+        id,
+        name: String(v["name"] ?? "").trim(),
+        start,
+        end,
+        ...(code !== "" ? { code } : {}),
+        active: true,
+      } as Shift;
       if ((rec as Shift).name === "")
         throw new DomainError("NOT_ELIGIBLE", "Informe o nome do turno.");
     } else {
@@ -206,12 +268,16 @@ export class MasterData {
         );
       if ([...this.users.values()].some((u) => u.username === username))
         throw new DomainError("NOT_ELIGIBLE", "Já existe um usuário com este nome.");
+      const code = checkOperatorCode(v["code"]);
+      if (code !== "" && [...this.users.values()].some((u) => u.code === code))
+        throw new DomainError("NOT_ELIGIBLE", "Já existe um operador com este código.");
       rec = {
         id,
         username,
         displayName: String(v["displayName"] ?? username),
         role: v["role"] === "ADMIN" ? "ADMIN" : "OPERATOR",
         passwordHash: await hashPassword(password),
+        ...(code !== "" ? { code } : {}),
         active: true,
       } as UserRec;
     }
@@ -222,7 +288,7 @@ export class MasterData {
 
   /** Atualiza campos de um cadastro. Etiquetas já emitidas não mudam (snapshot por valor). */
   async update(
-    kind: Kind,
+    kind: Exclude<Kind, "settings">,
     actor: string,
     id: string,
     patch: Record<string, unknown>,
@@ -248,6 +314,11 @@ export class MasterData {
             "O ALC Code deve ter de 2 a 10 letras ou números (ex.: AG10).",
           );
         if (alc !== "") next["alcCode"] = alc;
+      }
+      if (patch["eoNumber"] !== undefined) {
+        const eo = checkEo(patch["eoNumber"]);
+        if (eo !== "") next["eoNumber"] = eo;
+        else delete next["eoNumber"];
       }
       if (patch["partNumber"] !== undefined) {
         const pn = String(patch["partNumber"]).trim();
@@ -275,9 +346,21 @@ export class MasterData {
         }
       if (patch["name"] !== undefined && String(patch["name"]).trim() !== "")
         next["name"] = String(patch["name"]).trim();
+      if (patch["code"] !== undefined) {
+        const c = checkShiftCode(patch["code"]);
+        if (c !== "") next["code"] = c;
+        else delete next["code"];
+      }
     } else {
       if (patch["displayName"] !== undefined && String(patch["displayName"]).trim() !== "")
         next["displayName"] = String(patch["displayName"]).trim();
+      if (patch["code"] !== undefined) {
+        const c = checkOperatorCode(patch["code"]);
+        if (c !== "" && [...this.users.values()].some((u) => u.id !== id && u.code === c))
+          throw new DomainError("NOT_ELIGIBLE", "Já existe um operador com este código.");
+        if (c !== "") next["code"] = c;
+        else delete next["code"];
+      }
       if (patch["password"] !== undefined && String(patch["password"]) !== "") {
         if (String(patch["password"]).length < 8)
           throw new DomainError("NOT_ELIGIBLE", "A senha deve ter pelo menos 8 caracteres.");
@@ -289,7 +372,12 @@ export class MasterData {
     return next;
   }
 
-  async setActive(kind: Kind, actor: string, id: string, active: boolean): Promise<void> {
+  async setActive(
+    kind: Exclude<Kind, "settings">,
+    actor: string,
+    id: string,
+    active: boolean,
+  ): Promise<void> {
     const rec = this.store(kind).get(id);
     if (!rec) throw new DomainError("NOT_FOUND", "Cadastro não encontrado.");
     rec.active = active;
@@ -302,7 +390,7 @@ export class MasterData {
   }
 
   /** Exclusão física só para registros sem histórico (E-014); caso contrário, inativar. */
-  async remove(kind: Kind, actor: string, id: string): Promise<void> {
+  async remove(kind: Exclude<Kind, "settings">, actor: string, id: string): Promise<void> {
     if (!this.store(kind).has(id)) throw new DomainError("NOT_FOUND", "Cadastro não encontrado.");
     if (await this.hasHistory(kind, id))
       throw new DomainError(
@@ -313,7 +401,7 @@ export class MasterData {
     await this.audit("MASTER_DATA_DELETED", actor, kind, id);
   }
 
-  private async hasHistory(kind: Kind, id: string): Promise<boolean> {
+  private async hasHistory(kind: Exclude<Kind, "settings">, id: string): Promise<boolean> {
     const read = this.svc.reader;
     for (const job of await read.listJobs()) {
       for (const l of await read.listLabelsByJob(job.id)) {
@@ -326,6 +414,44 @@ export class MasterData {
       if (kind === "users" && job.operatorId === id) return true;
     }
     return false;
+  }
+
+  /** Configurações globais do QR (Supplier Code e Área do Fornecedor). */
+  getSettings(): Settings {
+    return (
+      this.settings.get("global") ?? {
+        id: "global",
+        supplierCode: "",
+        supplierArea: "",
+        active: true,
+      }
+    );
+  }
+
+  async updateSettings(actor: string, patch: Record<string, unknown>): Promise<Settings> {
+    const cur = this.getSettings();
+    const next = { ...cur };
+    if (patch["supplierCode"] !== undefined) {
+      const c = String(patch["supplierCode"]).trim().toUpperCase();
+      if (!SUPPLIER_CODE_PATTERN.test(c))
+        throw new DomainError(
+          "NOT_ELIGIBLE",
+          "O Supplier Code deve ter exatamente 4 letras ou números (ex.: AQ2A).",
+        );
+      next.supplierCode = c;
+    }
+    if (patch["supplierArea"] !== undefined) {
+      const a = String(patch["supplierArea"]).trim();
+      if (a.length > 50 || !/^[\x20-\x7e]*$/.test(a))
+        throw new DomainError(
+          "NOT_ELIGIBLE",
+          "A Área do Fornecedor deve ter até 50 caracteres simples (sem acentos).",
+        );
+      next.supplierArea = a;
+    }
+    this.settings.set("global", next);
+    await this.audit("MASTER_DATA_UPDATED", actor, "settings", "global");
+    return next;
   }
 
   /** Turno vigente no fuso informado, com virada noturna (D-025/D-013 em aberto: valores provisórios). */

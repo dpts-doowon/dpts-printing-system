@@ -1,5 +1,11 @@
 import { DomainError, MSG } from "./errors.js";
 import { hashCanonical } from "./hash.js";
+import {
+  buildHkmcQr,
+  HKMC_QR_SCHEMA_VERSION,
+  localDateTime,
+  validateHkmcFields,
+} from "./hkmc-qr.js";
 import { canTransition, deriveJobStatus, isActiveStatus } from "./states.js";
 import type { PrintStore, PrintStoreTx } from "./store.js";
 import {
@@ -61,6 +67,17 @@ export interface CreateOriginalInput {
   allowedMachineIds: string[];
   part: { id: string; description: string; partNumber: string };
   shift: { id: string; name: string };
+  /** Dados do QR no padrão H/KMC (cadastros). */
+  qr: {
+    supplierCode: string;
+    supplierArea?: string;
+    alcCode?: string;
+    eoNumber?: string;
+    /** Código de 4 caracteres do operador (4M). */
+    operatorCode: string;
+    /** Código do turno no campo flag do Trace (A ou @ no leitor da Hyundai). */
+    shiftCode: string;
+  };
   templateId: string;
   templateVersion: number;
   timezone: string;
@@ -104,29 +121,6 @@ export interface JobView {
   attempts: PrintAttempt[];
   labels: Label[];
 }
-
-/**
- * QR provisório (D-009/D-036 em aberto): um único código com a carga da peça e da produção
- * (identificador, descrição, Part Number, operador, turno e data/hora UTC), em JSON compacto versionado.
- */
-export const PROVISIONAL_QR_SCHEMA_VERSION = "2";
-export const provisionalQr = (f: {
-  labelId: string;
-  description: string;
-  partNumber: string;
-  operator: string;
-  shift: string;
-  producedAtUtc: string;
-}): string =>
-  JSON.stringify({
-    v: Number(PROVISIONAL_QR_SCHEMA_VERSION),
-    id: f.labelId,
-    d: f.description,
-    pn: f.partNumber,
-    op: f.operator,
-    t: f.shift,
-    ts: f.producedAtUtc,
-  });
 
 export class PrintService {
   private cfg: PrintServiceConfig;
@@ -273,9 +267,31 @@ export class PrintService {
             correlationId: input.correlationId,
             createdAt: now,
           };
+          const local = localDateTime(now, input.timezone);
+          const firstTrace = await tx.reserveTraceNumbers(input.quantity);
+          const qrFields = (traceNumber: number) => ({
+            supplierCode: input.qr.supplierCode,
+            supplierArea: input.qr.supplierArea,
+            partNumber: input.part.partNumber,
+            alcCode: input.qr.alcCode,
+            eoNumber: input.qr.eoNumber,
+            productionDate: local.date,
+            productionTime: local.time,
+            fourM: input.qr.operatorCode,
+            flag: input.qr.shiftCode,
+            traceNumber,
+          });
+          const qrErrors = validateHkmcFields(qrFields(firstTrace));
+          if (qrErrors.length > 0)
+            throw new DomainError(
+              "QR_DATA_INVALID",
+              `Cadastro incompleto ou inválido para o QR: ${qrErrors.join(" ")}`,
+              { errors: qrErrors },
+            );
           await tx.insertJob(job);
           for (let i = 1; i <= input.quantity; i++) {
             const labelId = this.deps.newId();
+            const traceNumber = firstTrace + i - 1;
             const snapshot: LabelSnapshot = {
               labelId,
               part: input.part,
@@ -286,15 +302,12 @@ export class PrintService {
               shift: input.shift,
               producedAtUtc: new Date(now).toISOString(),
               timezone: input.timezone,
-              qrContent: provisionalQr({
-                labelId,
-                description: input.part.description,
-                partNumber: input.part.partNumber,
-                operator: input.actor.displayName,
-                shift: input.shift.name,
-                producedAtUtc: new Date(now).toISOString(),
-              }),
-              qrSchemaVersion: PROVISIONAL_QR_SCHEMA_VERSION,
+              alcCode: input.qr.alcCode,
+              productionDate: local.date,
+              productionTime: local.time,
+              traceNumber,
+              qrContent: buildHkmcQr(qrFields(traceNumber)),
+              qrSchemaVersion: HKMC_QR_SCHEMA_VERSION,
               templateId: input.templateId,
               templateVersion: input.templateVersion,
             };

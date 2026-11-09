@@ -24,6 +24,7 @@ const STATUS: Record<DomainErrorCode, number> = {
   UNKNOWN_OUTCOME_OPEN: 409,
   NOT_ELIGIBLE: 400,
   REASON_REQUIRED: 400,
+  QR_DATA_INVALID: 422,
 };
 
 @Catch()
