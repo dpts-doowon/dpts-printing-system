@@ -1,0 +1,16 @@
+{
+  "agentId": "agent-st-1",
+  "stationId": "st-1",
+  "printerId": "pr-1",
+  "apiUrl": "https://SERVIDOR-A-DEFINIR",
+  "agentTokenFile": "C:\\DoowonPrintAgent\\agent.token",
+  "journalPath": "C:\\DoowonPrintAgent\\data\\agent.journal",
+  "logPath": "C:\\DoowonPrintAgent\\logs\\agent.log",
+  "printerAdapter": "zpl-tcp",
+  "printerHost": "192.168.0.50",
+  "printerPort": 9100,
+  "printerDpi": 203,
+  "printerMedia": "gap",
+  "printerMode": "thermal-transfer",
+  "timezone": "America/Sao_Paulo"
+}

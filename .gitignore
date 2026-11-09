@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+*.tsbuildinfo
+*.journal
+apps/print-agent/release/
+infrastructure/cdk.out/
+.local/

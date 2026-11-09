@@ -1,0 +1,47 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: traceability_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://app:app@localhost:5432/traceability_test
+      TEST_DATABASE_URL_API: postgres://app:app@localhost:5432/traceability_test_api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: PGPASSWORD=app psql -h localhost -U app traceability_test -c "CREATE DATABASE traceability_test_api"
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm -F @doowon/print-agent package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: doowon-print-agent
+          path: apps/print-agent/release/*.zip
+      - name: Infraestrutura (síntese offline, sem credenciais AWS)
+        run: >
+          pnpm -F @doowon/infra synth:offline
+          -c account=123456789012 -c region=sa-east-1 -c allowedCidrs=10.20.0.0/16
+          -c certificateArn=arn:aws:acm:sa-east-1:123456789012:certificate/ci
+          -c apiHost=api.exemplo.local -c webHost=app.exemplo.local

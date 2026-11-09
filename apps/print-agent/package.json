@@ -1,0 +1,22 @@
+{
+  "name": "@doowon/print-agent",
+  "version": "0.4.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "node dist/main.js",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@doowon/domain": "workspace:*",
+    "@doowon/printer-contracts": "workspace:*"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

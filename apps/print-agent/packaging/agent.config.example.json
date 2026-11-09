@@ -1,0 +1,12 @@
+{
+  "agentId": "agent-st-1",
+  "stationId": "st-1",
+  "printerId": "pr-1",
+  "apiUrl": "https://SERVIDOR-A-DEFINIR",
+  "agentTokenFile": "C:\\DoowonPrintAgent\\agent.token",
+  "journalPath": "C:\\DoowonPrintAgent\\data\\agent.journal",
+  "logPath": "C:\\DoowonPrintAgent\\logs\\agent.log",
+  "pollMs": 1000,
+  "requestTimeoutMs": 10000,
+  "printerAdapter": "simulator"
+}

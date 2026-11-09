@@ -1,0 +1,19 @@
+# PROVISÓRIO: ajuste caminhos e usuário conforme o sistema operacional definido para os PCs.
+[Unit]
+Description=Doowon Print Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=doowon-agent
+WorkingDirectory=/opt/doowon-print-agent
+ExecStart=/usr/bin/node /opt/doowon-print-agent/doowon-print-agent.mjs --config /etc/doowon-print-agent/agent.config.json
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/doowon-print-agent /var/log/doowon-print-agent
+
+[Install]
+WantedBy=multi-user.target

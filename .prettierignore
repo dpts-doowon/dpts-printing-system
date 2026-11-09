@@ -1,0 +1,5 @@
+docs/
+ENGINEERING.md
+pnpm-lock.yaml
+dist/
+.next/
