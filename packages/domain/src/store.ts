@@ -32,6 +32,8 @@ export interface PrintStoreTx {
   listAudit(): Promise<AuditEvent[]>;
   getAgent(stationId: string): Promise<(AgentInfo & { lastHeartbeatAt: number }) | undefined>;
   saveAgent(agent: AgentInfo & { lastHeartbeatAt: number }): Promise<void>;
+  /** Reserva `count` números de Trace sequenciais (1, 2, 3, ...) e devolve o primeiro. Atômico. */
+  reserveTraceNumbers(count: number): Promise<number>;
 }
 
 const clone = <T>(v: T): T => structuredClone(v);
@@ -42,6 +44,7 @@ export class InMemoryPrintStore implements PrintStore {
   private attempts = new Map<string, PrintAttempt>();
   private audit: AuditEvent[] = [];
   private agents = new Map<string, AgentInfo & { lastHeartbeatAt: number }>();
+  private traceCounter = 0;
   private chain: Promise<unknown> = Promise.resolve();
 
   private tx: PrintStoreTx = {
@@ -85,6 +88,11 @@ export class InMemoryPrintStore implements PrintStore {
     saveAgent: async (agent) => {
       this.agents.set(agent.stationId, clone(agent));
     },
+    reserveTraceNumbers: async (count) => {
+      const first = this.traceCounter + 1;
+      this.traceCounter += count;
+      return first;
+    },
   };
 
   read(): PrintStoreTx {
@@ -100,6 +108,7 @@ export class InMemoryPrintStore implements PrintStore {
         attempts: clone(this.attempts),
         audit: clone(this.audit),
         agents: clone(this.agents),
+        traceCounter: this.traceCounter,
       };
       try {
         return await fn(this.tx);
@@ -109,6 +118,7 @@ export class InMemoryPrintStore implements PrintStore {
         this.attempts = backup.attempts;
         this.audit = backup.audit;
         this.agents = backup.agents;
+        this.traceCounter = backup.traceCounter;
         throw e;
       }
     };

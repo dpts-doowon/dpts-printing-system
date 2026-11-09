@@ -12,15 +12,17 @@ import {
   zplEscape,
 } from "./zpl.js";
 import { loadConfig } from "./config.js";
+import { buildHkmcQr } from "@doowon/domain";
 
-const QR = JSON.stringify({
-  v: 2,
-  id: "11111111-2222-4333-8444-555555555555",
-  d: "AB123",
-  pn: "PN-0001",
-  op: "Operador 1",
-  t: "Turno 1",
-  ts: 1792554840000,
+const QR = buildHkmcQr({
+  supplierCode: "AQ2A",
+  partNumber: "29135-BP000",
+  alcCode: "AG10",
+  productionDate: "261022",
+  productionTime: "090000",
+  fourM: "OP01",
+  flag: "A",
+  traceNumber: 1,
 });
 const cmd = (over: Record<string, string> = {}): RenderedCommand => ({
   labelId: "L1",
@@ -29,10 +31,8 @@ const cmd = (over: Record<string, string> = {}): RenderedCommand => ({
   text: "x",
   hash: "h",
   data: {
-    description: "AB123",
-    partNumber: "PN-0001",
-    operator: "João ^~_",
-    shift: "Turno 1",
+    description: "AG10",
+    partNumber: "29135-BP000",
     producedAt: "2026-10-22T12:00:00Z",
     qr: QR,
     labelId: "L1",
@@ -60,8 +60,8 @@ describe("ZPL", () => {
     expect(z).toContain("^LL160");
     expect(z).toContain("^CI28");
     expect(z.match(/\^BQN/g)).toHaveLength(1);
-    expect(z).toContain("^FDAB123^FS");
-    expect(z).toContain("Jo_C3_A3o _5E_7E_5F"); // UTF-8, ^, ~ e _ escapados
+    expect(z).toContain("^FDAG10^FS");
+    expect(z).not.toContain("Operador");
     expect(z.startsWith("^XA")).toBe(true);
     expect(z.trim().endsWith("^XZ")).toBe(true);
   });
@@ -75,14 +75,25 @@ describe("ZPL", () => {
     expect(z).toContain("^PW354");
     expect(z).toContain("^LL236");
   });
-  it("a data impressa usa o horário de Brasília", () => {
+  it("a data impressa (AAMMDD) e a hora usam o horário de Brasília quando não vêm prontas", () => {
     const z = buildZpl(cmd());
-    expect(z).toContain("^FD22/10/26^FS");
+    expect(z).toContain("^FD261022^FS");
     expect(z).toContain("^FD09:00^FS");
+  });
+  it("usa data e hora do snapshot quando presentes", () => {
+    const z = buildZpl(cmd({ date: "270101", time: "23:59" }));
+    expect(z).toContain("^FD270101^FS");
+    expect(z).toContain("^FD23:59^FS");
+  });
+  it("o QR leva os caracteres de controle do padrão H/KMC escapados (RS, GS, EOT)", () => {
+    const z = buildZpl(cmd());
+    const fd = /\^BQN,2,\d+\^FH\^FDMA,([^^]*)\^FS/.exec(z)![1]!;
+    expect(fd.startsWith("_5B)_3E_1E06_1DVAQ2A_1DP29135BP000")).toBe(true);
+    expect(fd.endsWith("_1D_1E_04")).toBe(true);
   });
   it("nenhuma linha da coluna esquerda invade o QR, nem com nome de operador longo", () => {
     for (const dpi of [203, 300] as const) {
-      const z = buildZpl(cmd({ operator: "Maria Aparecida dos Santos Oliveira" }), {
+      const z = buildZpl(cmd({ partNumber: "29135-BP000-MUITO-LONGO-XYZ" }), {
         dpi,
         timezone: "America/Sao_Paulo",
         mediaTracking: "gap",
@@ -91,7 +102,7 @@ describe("ZPL", () => {
       const qrX = Number(/\^FO(\d+),\d+\^BQN/.exec(z)![1]);
       for (const m of z.matchAll(/\^FO(\d+),\d+\^A0N,\d+,(\d+)\^FH\^FD([^^]*)\^FS/g)) {
         const [, x, w, fd] = m;
-        if (fd === "AB123") continue; // descrição ocupa a linha superior
+        if (fd === "AG10") continue; // ALC ocupa a linha superior
         const chars = fd!.replace(/_[0-9A-F]{2}/g, "x").length;
         expect(Number(x) + chars * Number(w)).toBeLessThanOrEqual(qrX);
       }
@@ -99,11 +110,12 @@ describe("ZPL", () => {
   });
   it("módulos do QR crescem com o conteúdo", () => {
     expect(qrModules(10)).toBe(21);
-    expect(qrModules(Buffer.byteLength(QR))).toBeGreaterThan(41);
+    expect(qrModules(Buffer.byteLength(QR))).toBeGreaterThan(21);
     expect(() => qrModules(5000)).toThrow();
   });
   it("zplEscape mantém texto simples", () => {
     expect(zplEscape("PN-0001")).toBe("PN-0001");
+    expect(zplEscape("João ^~_")).toBe("Jo_C3_A3o _5E_7E_5F"); // UTF-8, ^, ~ e _ escapados
   });
   it("interpreta o ~HS", () => {
     const s = parseHostStatus(HS({ paperOut: 1, formats: 2 }))!;

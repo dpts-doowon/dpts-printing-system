@@ -89,6 +89,7 @@ async function seedRecords(md: MasterData, o: SeedOptions): Promise<void> {
     name: "Turno 1",
     start: "06:00",
     end: "14:00",
+    code: "A",
     active: true,
   });
   md.shifts.set("sh-2", {
@@ -96,6 +97,7 @@ async function seedRecords(md: MasterData, o: SeedOptions): Promise<void> {
     name: "Turno 2",
     start: "14:00",
     end: "22:00",
+    code: "A",
     active: true,
   });
   md.shifts.set("sh-3", {
@@ -103,10 +105,11 @@ async function seedRecords(md: MasterData, o: SeedOptions): Promise<void> {
     name: "Turno 3",
     start: "22:00",
     end: "06:00",
+    code: "A",
     active: true,
   });
-  md.parts.set("p-1", { id: "p-1", description: "AB123", partNumber: "PN-0001", active: true });
-  md.parts.set("p-2", { id: "p-2", description: "CD456", partNumber: "PN-0002", active: true });
+  md.parts.set("p-1", { id: "p-1", description: "AB123", partNumber: "PN-00000001", active: true });
+  md.parts.set("p-2", { id: "p-2", description: "CD456", partNumber: "PN-00000002", active: true });
   // Modelos informados pela Doowon (relato de 2026-11-02): ALC Code + Part Number. A descrição ainda não foi
   // informada; até lá o texto grande da etiqueta usa o ALC.
   for (const [alc, pn] of [
@@ -130,6 +133,7 @@ async function seedRecords(md: MasterData, o: SeedOptions): Promise<void> {
     displayName: string,
     role: "ADMIN" | "OPERATOR",
     pw: string,
+    code?: string,
   ) =>
     md.users.set(id, {
       id,
@@ -137,9 +141,11 @@ async function seedRecords(md: MasterData, o: SeedOptions): Promise<void> {
       displayName,
       role,
       passwordHash: await hashPassword(pw),
+      ...(code ? { code } : {}),
       active: true,
     });
+  md.settings.set("global", { id: "global", supplierCode: "AQ2A", supplierArea: "", active: true });
   await mk("u-admin", "admin", "Administrador", "ADMIN", o.adminPassword);
-  await mk("u-op1", "operador1", "Operador 1", "OPERATOR", o.operatorPassword);
-  await mk("u-op2", "operador2", "Operador 2", "OPERATOR", o.operatorPassword);
+  await mk("u-op1", "operador1", "Operador 1", "OPERATOR", o.operatorPassword, "OP01");
+  await mk("u-op2", "operador2", "Operador 2", "OPERATOR", o.operatorPassword, "OP02");
 }

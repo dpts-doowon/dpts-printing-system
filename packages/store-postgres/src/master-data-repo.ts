@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-export type MasterKind = "machines" | "parts" | "shifts" | "users";
+export type MasterKind = "machines" | "parts" | "shifts" | "users" | "settings";
 
 /** Persistência dos cadastros: um documento JSON por registro. */
 export class PostgresMasterDataRepo {
@@ -12,6 +12,7 @@ export class PostgresMasterDataRepo {
       parts: [],
       shifts: [],
       users: [],
+      settings: [],
     };
     const res = await this.pool.query("SELECT kind, data FROM master_data ORDER BY updated_at, id");
     for (const r of res.rows as { kind: MasterKind; data: { id: string } }[])

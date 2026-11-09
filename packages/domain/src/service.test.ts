@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DomainError } from "./errors.js";
+import { checkHkmcQr, localDateTime } from "./hkmc-qr.js";
 import { ALLOWED_QUANTITIES } from "./types.js";
 import { admin, agentInfo, counts, operator, originalInput, printOne, setup } from "./testkit.js";
 
@@ -38,20 +39,11 @@ describe("criação do PRINT_JOB ORIGINAL (INV-1..4)", () => {
     const { svc } = setup();
     const { view } = await svc.createOriginal(originalInput());
     const l = view.labels[0]!;
-    expect(l.snapshot.part.partNumber).toBe("PN-001");
+    expect(l.snapshot.part.partNumber).toBe("29135-BP000");
     expect(l.snapshot.operator.displayName).toBe("Operador Um");
     expect(l.snapshot.templateVersion).toBe(1);
-    expect(l.snapshot.qrSchemaVersion).toBe("2");
-    const qr = JSON.parse(l.snapshot.qrContent);
-    expect(qr).toMatchObject({
-      v: 2,
-      id: l.labelId,
-      d: l.snapshot.part.description,
-      pn: l.snapshot.part.partNumber,
-      op: l.snapshot.operator.displayName,
-      t: l.snapshot.shift.name,
-      ts: l.snapshot.producedAtUtc,
-    });
+    expect(l.snapshot.qrSchemaVersion).toBe("3-hkmc");
+    expect(checkHkmcQr(l.snapshot.qrContent)).toEqual([]);
     expect(l.snapshotHash).toMatch(/^[0-9a-f]{64}$/);
     expect(l.payloadHash).toMatch(/^[0-9a-f]{64}$/);
     const att = view.attempts[0]!;
@@ -578,5 +570,79 @@ describe("quantidades de produção (E-016)", () => {
   it("o padrão do serviço aceita só 4, 8 e 32 (linhas completas de 4 etiquetas)", () => {
     expect([...ALLOWED_QUANTITIES]).toEqual([4, 8, 32]);
     expect(ALLOWED_QUANTITIES.every((q) => q % 4 === 0)).toBe(true);
+  });
+});
+
+describe("QR no padrão H/KMC e Trace Number", () => {
+  const RS = "\u001e";
+  const GS = "\u001d";
+  const EOT = "\u0004";
+
+  it("monta o QR no quadro da Hyundai, sem hífen no Part Number", async () => {
+    const { svc } = setup();
+    const { view } = await svc.createOriginal(originalInput({ quantity: 3 }));
+    const qr = view.labels[0]!.snapshot.qrContent;
+    expect(qr.startsWith(`[)>${RS}06${GS}VAQ2A${GS}P29135BP000${GS}SAG10${GS}E${GS}T`)).toBe(true);
+    expect(qr.endsWith(`${GS}${RS}${EOT}`)).toBe(true);
+    expect(checkHkmcQr(qr)).toEqual([]);
+    expect(view.labels[0]!.snapshot.qrSchemaVersion).toBe("3-hkmc");
+  });
+
+  it("Trace Number é sequencial e contínuo entre pedidos", async () => {
+    const { svc } = setup();
+    const a = await svc.createOriginal(originalInput({ quantity: 3 }));
+    const b = await svc.createOriginal(originalInput({ quantity: 1, printerId: "pr-2" }));
+    const traces = [...a.view.labels, ...b.view.labels].map((l) => l.snapshot.traceNumber);
+    expect(traces).toEqual([1, 2, 3, 4]);
+    expect(a.view.labels[0]!.snapshot.qrContent).toContain("A0000001");
+  });
+
+  it("pedido rejeitado não consome números de Trace", async () => {
+    const { svc } = setup();
+    await expect(
+      svc.createOriginal(
+        originalInput({ qr: { supplierCode: "AQ2A", operatorCode: "OP", shiftCode: "A" } }),
+      ),
+    ).rejects.toMatchObject({ code: "QR_DATA_INVALID" });
+    const ok = await svc.createOriginal(originalInput());
+    expect(ok.view.labels[0]!.snapshot.traceNumber).toBe(1);
+  });
+
+  it("recusa dados que o leitor da Hyundai reprovaria", async () => {
+    const { svc } = setup();
+    const bad = [
+      { supplierCode: "AQ2", operatorCode: "OP01", shiftCode: "A" },
+      { supplierCode: "AQ2A", operatorCode: "OP01", shiftCode: "B" },
+      { supplierCode: "AQ2A", operatorCode: "OP01", shiftCode: "A", eoNumber: "123" },
+    ];
+    for (const qr of bad)
+      expect(await code(svc.createOriginal(originalInput({ qr })))).toBe("QR_DATA_INVALID");
+  });
+
+  it("EO Number de 8 a 9 caracteres e Área do Fornecedor entram no QR", async () => {
+    const { svc } = setup();
+    const { view } = await svc.createOriginal(
+      originalInput({
+        qr: {
+          supplierCode: "AQ2A",
+          alcCode: "AG10",
+          operatorCode: "OP01",
+          shiftCode: "@",
+          eoNumber: "EO1234567",
+          supplierArea: "LINHA 3",
+        },
+      }),
+    );
+    const qr = view.labels[0]!.snapshot.qrContent;
+    expect(qr).toContain(`${GS}EEO1234567${GS}`);
+    expect(qr).toContain(`${GS}CLINHA 3${GS}`);
+    expect(checkHkmcQr(qr)).toEqual([]);
+  });
+
+  it("data e hora do QR usam o fuso da planta (AAMMDD / HHMMSS)", () => {
+    expect(localDateTime(Date.UTC(2026, 10, 6, 2, 5, 9), "America/Sao_Paulo")).toEqual({
+      date: "261105",
+      time: "230509",
+    });
   });
 });

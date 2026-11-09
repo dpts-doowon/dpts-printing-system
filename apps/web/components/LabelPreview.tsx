@@ -4,37 +4,35 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 
 export interface LabelData {
+  /** ALC Code (Sequence Code), em destaque. */
   description: string;
   partNumber: string;
-  operator: string;
-  shift: string;
+  /** AAMMDD */
+  date: string;
+  /** HH:MM */
+  time: string;
   producedAtUtc: string;
   qr: string;
   labelId: string;
 }
 
-/** Layout provisório 30 x 20 mm: descrição em maior destaque, Part Number em fonte pequena, operador, turno, data e um único QR com a carga da peça e da produção. Layout final: D-009/D-010. */
+/** Etiqueta (Doowon, 2026-11-06): ALC em destaque, Part Number, data (AAMMDD), hora e QR no padrão H/KMC. Operador e turno não são impressos. */
 export function LabelPreview({ label }: { label: LabelData }) {
   const [svg, setSvg] = useState("");
   useEffect(() => {
     void QRCode.toString(label.qr, { type: "svg", margin: 0 }).then(setSvg);
   }, [label.qr]);
-  const when = new Date(label.producedAtUtc).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
   return (
     <div className="label-preview" aria-label="Pré-visualização da etiqueta">
       <div className="left">
         <div className="d">{label.description}</div>
         <div className="m">
-          <b>OP:</b> {label.operator}
+          {label.partNumber}
           <br />
-          <b>Turno:</b> {label.shift}
+          {label.date}
           <br />
-          <b>Data:</b> {when}
+          {label.time}
         </div>
-        <div className="pn">PN {label.partNumber}</div>
       </div>
       <div className="qr" dangerouslySetInnerHTML={{ __html: svg }} />
     </div>

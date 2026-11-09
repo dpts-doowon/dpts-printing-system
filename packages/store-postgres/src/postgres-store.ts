@@ -262,6 +262,15 @@ function txOn(q: Q): PrintStoreTx {
         ],
       );
     },
+    reserveTraceNumbers: async (count) => {
+      const r = await q.query(
+        `INSERT INTO trace_counter (id, value) VALUES (1, $1)
+         ON CONFLICT (id) DO UPDATE SET value = trace_counter.value + $1
+         RETURNING value`,
+        [count],
+      );
+      return Number(r.rows[0].value) - count + 1;
+    },
   };
 }
 

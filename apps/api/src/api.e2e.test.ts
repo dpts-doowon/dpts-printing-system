@@ -3,6 +3,7 @@ import type { INestApplication } from "@nestjs/common";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { HttpTransport, MemoryJournal, PrintAgent, SimulatedPrinter } from "@doowon/print-agent";
 import ExcelJS from "exceljs";
+import { checkHkmcQr } from "@doowon/domain";
 import { createApp } from "./app.js";
 import { createRuntime, seedDevData, type Runtime } from "./runtime.js";
 
@@ -532,13 +533,13 @@ describe("administração", () => {
       (
         await ctx.call("POST", "/admin/parts", {
           token: adm,
-          body: { description: "A1234", partNumber: "PN-9" },
+          body: { description: "A1234", partNumber: "29135-EF789" },
         })
       ).status,
     ).toBe(400);
     const created = await ctx.call("POST", "/admin/parts", {
       token: adm,
-      body: { description: "ef789", partNumber: "PN-9" },
+      body: { description: "ef789", partNumber: "29135-EF789" },
     });
     expect(created.status).toBe(201);
     expect(created.body.description).toBe("EF789");
@@ -634,13 +635,13 @@ describe("fluxo do protótipo: ajuste, conferência, painel e filtros", () => {
     const job = await ctx.call("POST", "/operator/print-jobs", { token: op, body: body("p-1", 1) });
     const l = job.body.attempts[0].label;
     expect(Object.keys(l).sort()).toEqual([
+      "date",
       "description",
       "labelId",
-      "operator",
       "partNumber",
       "producedAtUtc",
       "qr",
-      "shift",
+      "time",
     ]);
   });
 
@@ -680,7 +681,7 @@ describe("fluxo do protótipo: ajuste, conferência, painel e filtros", () => {
     const h = (qs: string) =>
       ctx.call("GET", `/admin/history?${qs}`, { token: adm }).then((r) => r.body);
     expect((await h("")).total).toBe(11);
-    expect((await h("partNumber=PN-0002")).total).toBe(1);
+    expect((await h("partNumber=PN-00000002")).total).toBe(1);
     expect((await h("part=ab123")).total).toBe(10);
     expect((await h("operatorId=u-op1")).total).toBe(11);
     expect((await h("operatorId=u-op2")).total).toBe(0);
@@ -718,7 +719,7 @@ describe("fluxo do protótipo: ajuste, conferência, painel e filtros", () => {
     const ws = wb.getWorksheet("Etiquetas")!;
     expect(ws.rowCount).toBe(11); // cabeçalho + 10 etiquetas
     expect(ws.getRow(1).values).toContain("Part Number");
-    expect(ws.getRow(2).getCell(3).value).toBe("PN-0001");
+    expect(ws.getRow(2).getCell(3).value).toBe("PN-00000001");
     const none = await raw("/admin/history/export?part=ZZ999", admin);
     const wb2 = new ExcelJS.Workbook();
     await wb2.xlsx.load(Buffer.from(await none.arrayBuffer()) as any);
@@ -744,7 +745,7 @@ describe("fluxo do protótipo: ajuste, conferência, painel e filtros", () => {
     const trace = await ctx.call("GET", `/admin/labels/${labelId}`, { token: adm });
     expect(trace.body.label.snapshot.part).toMatchObject({
       description: "AB123",
-      partNumber: "PN-0001",
+      partNumber: "PN-00000001",
     });
     expect(
       (await ctx.call("PUT", "/admin/machines/m-1", { token: adm, body: { name: "Injetora 01" } }))
@@ -804,5 +805,75 @@ describe("quantidades de produção (E-016)", () => {
       token: op,
     });
     expect(done.body.status).toBe("COMPLETED");
+  });
+});
+
+describe("QR H/KMC: cadastros e Configurações", () => {
+  it("Configurações: Supplier Code de 4 caracteres e Área do Fornecedor, só pelo ADMIN", async () => {
+    const adm = await ctx.login("admin", "admin-pass-123");
+    const op = await ctx.login("operador1", "operator-pass-123", "st-1");
+    const cur = await ctx.call("GET", "/admin/settings", { token: adm });
+    expect(cur.body).toMatchObject({ supplierCode: "AQ2A", supplierArea: "" });
+    expect((await ctx.call("GET", "/admin/settings", { token: op })).status).toBeGreaterThanOrEqual(
+      400,
+    );
+    const bad = await ctx.call("PUT", "/admin/settings", {
+      token: adm,
+      body: { supplierCode: "AQ2" },
+    });
+    expect(bad.status).toBe(400);
+    const ok = await ctx.call("PUT", "/admin/settings", {
+      token: adm,
+      body: { supplierCode: "bz9k", supplierArea: "LINHA 3" },
+    });
+    expect(ok.body).toMatchObject({ supplierCode: "BZ9K", supplierArea: "LINHA 3" });
+  });
+
+  it("o QR impresso usa Supplier Code, ALC, EO, 4M do operador e flag do turno", async () => {
+    const adm = await ctx.login("admin", "admin-pass-123");
+    const op = await ctx.login("operador1", "operator-pass-123", "st-1");
+    const eo = await ctx.call("PUT", "/admin/parts/p-1", {
+      token: adm,
+      body: { eoNumber: "EO1234567" },
+    });
+    expect(eo.body.eoNumber).toBe("EO1234567");
+    const r = await ctx.call("POST", "/operator/print-jobs", {
+      token: op,
+      body: body("p-AG10", 1),
+    });
+    expect(r.status).toBe(201);
+    const qr: string = r.body.attempts[0].label.qr;
+    expect(checkHkmcQr(qr)).toEqual([]);
+    expect(qr).toContain("\u001dVAQ2A\u001dP29135BP000\u001dSAG10\u001dE\u001dT");
+    expect(qr).toContain("OP01A0000001");
+  });
+
+  it("EO Number inválido e código de operador inválido ou repetido são recusados", async () => {
+    const adm = await ctx.login("admin", "admin-pass-123");
+    expect(
+      (await ctx.call("PUT", "/admin/parts/p-1", { token: adm, body: { eoNumber: "123" } })).status,
+    ).toBe(400);
+    expect(
+      (await ctx.call("PUT", "/admin/operators/u-op1", { token: adm, body: { code: "OP" } }))
+        .status,
+    ).toBe(400);
+    expect(
+      (await ctx.call("PUT", "/admin/operators/u-op1", { token: adm, body: { code: "op02" } }))
+        .status,
+    ).toBe(400);
+  });
+
+  it("operador sem código de 4 caracteres não imprime: erro claro e nenhum Trace é consumido", async () => {
+    const adm = await ctx.login("admin", "admin-pass-123");
+    const created = await ctx.call("POST", "/admin/operators", {
+      token: adm,
+      body: { username: "semcodigo", displayName: "Sem Codigo", password: "senha-segura-1" },
+    });
+    expect(created.status).toBe(201);
+    const op = await ctx.login("semcodigo", "senha-segura-1", "st-1");
+    const r = await ctx.call("POST", "/operator/print-jobs", { token: op, body: body("p-1", 1) });
+    expect(r.status).toBe(422);
+    expect(r.body.code).toBe("QR_DATA_INVALID");
+    expect(r.body.message).toContain("4M");
   });
 });

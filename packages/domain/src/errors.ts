@@ -11,7 +11,8 @@ export type DomainErrorCode =
   | "LEASE_INVALID"
   | "UNKNOWN_OUTCOME_OPEN"
   | "NOT_ELIGIBLE"
-  | "REASON_REQUIRED";
+  | "REASON_REQUIRED"
+  | "QR_DATA_INVALID";
 
 export class DomainError extends Error {
   constructor(
