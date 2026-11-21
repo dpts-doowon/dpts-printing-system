@@ -1,0 +1,11 @@
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	# /api/* vai para a API (o prefixo é removido); o resto é o site.
+	handle_path /api/* {
+		reverse_proxy api:3001
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
