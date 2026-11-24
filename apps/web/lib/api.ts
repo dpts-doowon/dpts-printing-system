@@ -17,10 +17,21 @@ export const setToken = (t: string | null): void => {
   token = t;
 };
 
-export const newKey = (): string => crypto.randomUUID();
+/** UUID v4 que funciona também em HTTP (crypto.randomUUID só existe em contexto seguro/HTTPS). */
+export const newKey = (): string => {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  const b = new Uint8Array(16);
+  if (c && typeof c.getRandomValues === "function") c.getRandomValues(b);
+  else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+};
 
 export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const correlationId = crypto.randomUUID();
+  const correlationId = newKey();
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -54,7 +65,7 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
 
 /** Baixa um arquivo (ex.: relatório em Excel) com a sessão atual. */
 export async function download(path: string, fallbackName: string): Promise<void> {
-  const correlationId = crypto.randomUUID();
+  const correlationId = newKey();
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
