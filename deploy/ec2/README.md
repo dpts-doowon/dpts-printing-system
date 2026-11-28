@@ -64,10 +64,13 @@ O servidor precisa de permissão no bucket: crie um bucket S3 privado e uma fun�
 só nesse bucket. Depois:
 
 ```bash
-sudo apt-get install -y cron; crontab -e
-# todo dia às 03:10:
-10 3 * * * /home/ubuntu/dpts/deploy/ec2/backup.sh >> /home/ubuntu/dpts/deploy/ec2/backup.log 2>&1
+# instalar o AWS CLI (arm64) e agendar (Ubuntu 26.04, rodando como root via /etc/cron.d):
+sudo apt-get install -y awscli cron   # ou o instalador oficial v2
+printf 'AWS_DEFAULT_REGION=us-east-2\nPATH=/usr/local/bin:/usr/bin:/bin\n15 6 * * * root /opt/dpts/app/deploy/ec2/backup.sh </dev/null >>/var/log/dpts-backup.log 2>&1\n' | sudo tee /etc/cron.d/dpts-backup
+# 06:15 UTC = 03:15 em Brasília. Confira no dia seguinte: tail /var/log/dpts-backup.log
 ```
+
+Ao testar `backup.sh` à mão no terminal, use `</dev/null` (o `docker compose exec` pode travar esperando a entrada).
 
 **Teste a restauração antes de confiar no backup:** `gunzip -c backups/ARQUIVO.sql.gz | docker compose exec -T db psql -U app -d traceability`
 em uma instância de teste. Um backup nunca restaurado não é um backup.

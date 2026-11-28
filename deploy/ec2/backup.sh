@@ -7,7 +7,7 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 DIR=./backups
 mkdir -p "$DIR"
 FILE="$DIR/dpts-$STAMP.sql.gz"
-docker compose exec -T db pg_dump -U app -d traceability | gzip > "$FILE"
+docker compose exec -T db pg_dump -U app -d traceability </dev/null | gzip > "$FILE"
 # Dump vazio ou corrompido não conta como backup.
 test "$(gzip -dc "$FILE" | wc -c)" -gt 1000
 if [ -n "${BACKUP_BUCKET:-}" ]; then
